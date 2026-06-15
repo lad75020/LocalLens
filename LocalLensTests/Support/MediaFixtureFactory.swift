@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import CoreGraphics
 import CoreText
 import Foundation
@@ -89,6 +90,89 @@ enum MediaFixtureFactory {
         ]
         guard pdf.write(to: url, withOptions: options) else { throw XCTSkip("Unable to write locked PDF") }
         return url
+    }
+
+    static func writeWAV(named name: String = "tone.wav", durationSeconds: Double = 1.0, sampleRate: Int = 8_000, in root: URL) throws -> URL {
+        let frameCount = max(1, Int(durationSeconds * Double(sampleRate)))
+        var data = Data()
+        func appendString(_ string: String) { data.append(contentsOf: string.data(using: .ascii)!) }
+        func appendUInt32(_ value: UInt32) { var little = value.littleEndian; data.append(Data(bytes: &little, count: 4)) }
+        func appendUInt16(_ value: UInt16) { var little = value.littleEndian; data.append(Data(bytes: &little, count: 2)) }
+        let byteRate = sampleRate * 2
+        let dataByteCount = frameCount * 2
+        appendString("RIFF")
+        appendUInt32(UInt32(36 + dataByteCount))
+        appendString("WAVE")
+        appendString("fmt ")
+        appendUInt32(16)
+        appendUInt16(1)
+        appendUInt16(1)
+        appendUInt32(UInt32(sampleRate))
+        appendUInt32(UInt32(byteRate))
+        appendUInt16(2)
+        appendUInt16(16)
+        appendString("data")
+        appendUInt32(UInt32(dataByteCount))
+        data.append(Data(repeating: 0, count: dataByteCount))
+        let url = root.appendingPathComponent(name)
+        try data.write(to: url)
+        return url
+    }
+
+    static func writeCorruptMedia(named name: String = "corrupt.wav", in root: URL) throws -> URL {
+        let url = root.appendingPathComponent(name)
+        try Data("not a media file".utf8).write(to: url)
+        return url
+    }
+
+    static func writeVideo(named name: String = "clip.mov", durationSeconds: Double = 1.0, frameCount: Int = 3, in root: URL) async throws -> URL {
+        let url = root.appendingPathComponent(name)
+        try? FileManager.default.removeItem(at: url)
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let settings: [String: Any] = [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: 320,
+            AVVideoHeightKey: 180
+        ]
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+        input.expectsMediaDataInRealTime = false
+        let attributes: [String: Any] = [
+            kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32ARGB),
+            kCVPixelBufferWidthKey as String: 320,
+            kCVPixelBufferHeightKey as String: 180
+        ]
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: attributes)
+        guard writer.canAdd(input) else { throw XCTSkip("Unable to add video writer input") }
+        writer.add(input)
+        guard writer.startWriting() else { throw writer.error ?? XCTSkip("Unable to start video writer") }
+        writer.startSession(atSourceTime: .zero)
+        let frameDuration = durationSeconds / Double(max(1, frameCount))
+        for frame in 0..<frameCount {
+            while !input.isReadyForMoreMediaData { try await Task.sleep(nanoseconds: 1_000_000) }
+            guard let buffer = makePixelBuffer(width: 320, height: 180, frame: frame) else { throw XCTSkip("Unable to make pixel buffer") }
+            let time = CMTime(seconds: Double(frame) * frameDuration, preferredTimescale: 600)
+            guard adaptor.append(buffer, withPresentationTime: time) else { throw writer.error ?? XCTSkip("Unable to append video frame") }
+        }
+        input.markAsFinished()
+        await writer.finishWriting()
+        if writer.status != .completed { throw writer.error ?? XCTSkip("Unable to finish video writer") }
+        return url
+    }
+
+    private static func makePixelBuffer(width: Int, height: Int, frame: Int) -> CVPixelBuffer? {
+        var pixelBuffer: CVPixelBuffer?
+        CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32ARGB, nil, &pixelBuffer)
+        guard let pixelBuffer else { return nil }
+        CVPixelBufferLockBaseAddress(pixelBuffer, [])
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
+        guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+        let color: UInt32 = frame.isMultiple(of: 2) ? 0xFF3366CC : 0xFF66CC33
+        for y in 0..<height {
+            let row = base.advanced(by: y * bytesPerRow).assumingMemoryBound(to: UInt32.self)
+            for x in 0..<width { row[x] = color.bigEndian }
+        }
+        return pixelBuffer
     }
 
     static func asset(id: UUID = UUID(), folderID: UUID = UUID(), filename: String, mediaType: MediaType) -> MediaAsset {

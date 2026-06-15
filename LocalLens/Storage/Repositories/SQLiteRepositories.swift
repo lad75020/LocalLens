@@ -390,13 +390,13 @@ public actor SQLiteAppSettingsRepository: AppSettingsRepository {
 }
 
 public actor StorageMaintenanceRepository: StorageMaintenanceRepositoryProtocol {
-    private let database: LocalLensDatabase
+    let database: LocalLensDatabase
     public init(database: LocalLensDatabase) { self.database = database }
     public func indexedAssetCount() async throws -> Int { try await database.scalarInt("SELECT COUNT(*) AS count FROM media_assets;") }
     public func deleteIndexData() async throws {
         try await database.execute("DELETE FROM searchable_chunks_fts;")
-        try await database.execute("DELETE FROM searchable_chunks;")
         try await database.execute("DELETE FROM vector_embeddings;")
+        try await database.execute("DELETE FROM searchable_chunks;")
         try await database.execute("DELETE FROM extraction_records;")
         try await database.execute("DELETE FROM media_assets;")
         try await database.execute("DELETE FROM index_failures;")

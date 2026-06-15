@@ -15,6 +15,8 @@ public struct SearchableChunkBuilder: Sendable {
         for asset: MediaAsset,
         imageResult: ImageExtractionResult?,
         pdfResult: PDFExtractionResult?,
+        audioResult: AudioExtractionResult? = nil,
+        videoResult: VideoSceneExtractionResult? = nil,
         extractionRecordIDs: [ExtractionStage: UUID] = [:]
     ) -> [SearchableChunk] {
         var output: [SearchableChunk] = []
@@ -61,7 +63,49 @@ public struct SearchableChunkBuilder: Sendable {
             }
         }
 
+        if let audioResult {
+            output += transcriptChunks(assetID: asset.id, recordID: extractionRecordIDs[.audioTranscript], segments: audioResult.transcriptSegments)
+        }
+
+        if let videoResult {
+            output += transcriptChunks(assetID: asset.id, recordID: extractionRecordIDs[.videoTranscript], segments: videoResult.transcriptSegments)
+            for frame in videoResult.keyframes {
+                output += makeChunks(
+                    assetID: asset.id,
+                    extractionRecordID: extractionRecordIDs[.videoKeyframe],
+                    type: .visibleText,
+                    text: frame.combinedText,
+                    timestampStart: frame.timestamp,
+                    timestampEnd: frame.timestamp,
+                    confidence: frame.recognizedText.map(\.confidence).max()
+                )
+                output += makeChunks(
+                    assetID: asset.id,
+                    extractionRecordID: extractionRecordIDs[.sceneLabels],
+                    type: .visualLabel,
+                    text: frame.labelText,
+                    timestampStart: frame.timestamp,
+                    timestampEnd: frame.timestamp,
+                    confidence: frame.visualLabels.map(\.confidence).max()
+                )
+            }
+        }
+
         return output.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private func transcriptChunks(assetID: UUID, recordID: UUID?, segments: [TranscriptSegment]) -> [SearchableChunk] {
+        segments.flatMap { segment in
+            makeChunks(
+                assetID: assetID,
+                extractionRecordID: recordID,
+                type: .transcript,
+                text: segment.text,
+                timestampStart: segment.timestampStart,
+                timestampEnd: segment.timestampEnd,
+                confidence: segment.confidence
+            )
+        }
     }
 
     public func makeChunks(

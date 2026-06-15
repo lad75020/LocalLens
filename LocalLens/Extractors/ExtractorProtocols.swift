@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 public protocol ExtractorService: Sendable {
@@ -86,6 +87,58 @@ public struct PDFExtractionResult: Equatable, Sendable {
     public var partialFailureCount: Int { pages.filter { $0.failureCategory != nil }.count }
 }
 
+public struct TranscriptSegment: Equatable, Sendable {
+    public let text: String
+    public let timestampStart: Double
+    public let timestampEnd: Double
+    public let confidence: Double?
+
+    public init(text: String, timestampStart: Double, timestampEnd: Double, confidence: Double? = nil) {
+        self.text = text
+        self.timestampStart = max(0, timestampStart)
+        self.timestampEnd = max(self.timestampStart, timestampEnd)
+        self.confidence = confidence
+    }
+}
+
+public protocol AudioTranscriptionProvider: Sendable {
+    func transcriptSegments(for url: URL, durationSeconds: Double) async throws -> [TranscriptSegment]
+}
+
+public struct AudioExtractionResult: Equatable, Sendable {
+    public let durationSeconds: Double
+    public let transcriptSegments: [TranscriptSegment]
+    public let failureCategory: FailureCategory?
+
+    public var transcriptText: String { transcriptSegments.map(\.text).joined(separator: "\n") }
+}
+
+public struct VideoFrameScene: Equatable, Sendable {
+    public let timestamp: Double
+    public let pixelWidth: Int
+    public let pixelHeight: Int
+    public let recognizedText: [RecognizedText]
+    public let visualLabels: [VisualLabel]
+
+    public var combinedText: String { recognizedText.map(\.text).joined(separator: "\n") }
+    public var labelText: String { visualLabels.map(\.label).joined(separator: "\n") }
+}
+
+public protocol VideoFrameAnalyzer: Sendable {
+    func analyzeFrame(at timestamp: Double, image: CGImage) async -> (recognizedText: [RecognizedText], visualLabels: [VisualLabel])
+}
+
+public struct VideoSceneExtractionResult: Equatable, Sendable {
+    public let durationSeconds: Double
+    public let keyframes: [VideoFrameScene]
+    public let transcriptSegments: [TranscriptSegment]
+    public let sampledFrameCount: Int
+    public let failureCategory: FailureCategory?
+
+    public var transcriptText: String { transcriptSegments.map(\.text).joined(separator: "\n") }
+    public var sceneLabelText: String { keyframes.flatMap(\.visualLabels).map(\.label).joined(separator: "\n") }
+}
+
 public struct EmbeddingStageResult: Equatable, Sendable {
     public let chunks: [SearchableChunk]
     public let providerID: String?
@@ -98,6 +151,14 @@ public struct ImagePDFIndexResult: Equatable, Sendable {
     public let state: IndexState
     public let thumbnailURL: URL?
     public let chunkCount: Int
+    public let failureCategory: FailureCategory?
+}
+
+public struct AudioVideoIndexResult: Equatable, Sendable {
+    public let assetID: UUID
+    public let state: IndexState
+    public let chunkCount: Int
+    public let sampledFrameCount: Int
     public let failureCategory: FailureCategory?
 }
 

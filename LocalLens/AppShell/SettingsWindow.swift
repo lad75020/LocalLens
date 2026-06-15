@@ -13,7 +13,12 @@ struct SettingsWindow: View {
         "settingsDeleteIndexButton",
         "settingsRebuildIndexButton",
         "settingsDiagnosticsRefreshButton",
-        "settingsExportDiagnosticsButton"
+        "settingsExportDiagnosticsButton",
+        "settingsRetryFailureButton",
+        "settingsIgnoreFailureButton",
+        "settingsReindexFolderButton",
+        "settingsRebuildQueueButton",
+        "settingsCleanupCacheButton"
     ]
 
     @EnvironmentObject private var dependencies: DependencyContainer
@@ -43,7 +48,7 @@ struct SettingsWindow: View {
                 .accessibilityIdentifier("settingsDiagnosticsTab")
         }
         .padding(20)
-        .frame(minWidth: 720, minHeight: 520)
+        .frame(minWidth: LocalLensTheme.Metrics.settingsMinWidth, minHeight: LocalLensTheme.Metrics.settingsMinHeight)
         .confirmationDialog(
             "Remove watched folder?",
             isPresented: Binding(
@@ -75,6 +80,13 @@ struct SettingsWindow: View {
                     .accessibilityIdentifier("settingsAddFolderButton")
                 Spacer()
             }
+
+            Text("Shortcuts: Space preview • ⌘⇧R reveal • ⌘O open • ⌥⌘C path • ⌘⇧C snippet")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(8)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .accessibilityIdentifier("settingsShortcutsSummary")
 
             if model.folders.isEmpty {
                 EmptySettingsState(
@@ -129,15 +141,25 @@ struct SettingsWindow: View {
                 MetricCard(title: "Completed", value: "\(model.progress.completedCount)")
                 MetricCard(title: "Failed", value: "\(model.progress.failedCount)")
                 MetricCard(title: "Cancelled", value: "\(model.progress.cancelledCount)")
+                MetricCard(title: "Queued Jobs", value: "\(model.storageUsage.queuedJobCount)")
+                MetricCard(title: "Storage", value: model.storageUsage.formattedTotal)
                 MetricCard(title: "Image/PDF", value: "\(model.imagePDFMetrics.total)")
                 MetricCard(title: "Image/PDF Complete", value: "\(model.imagePDFMetrics.complete)")
                 MetricCard(title: "Image/PDF Partial", value: "\(model.imagePDFMetrics.partial)")
                 MetricCard(title: "Image/PDF Failed", value: "\(model.imagePDFMetrics.failed)")
+                MetricCard(title: "Audio/Video", value: "\(model.audioVideoMetrics.total)")
+                MetricCard(title: "A/V Complete", value: "\(model.audioVideoMetrics.complete)")
+                MetricCard(title: "A/V Partial", value: "\(model.audioVideoMetrics.partial)")
+                MetricCard(title: "A/V Failed", value: "\(model.audioVideoMetrics.failed)")
             }
             .accessibilityIdentifier("settingsIndexingMetrics")
 
             HStack {
                 StatusPill(text: model.progress.isPaused ? "Paused" : (model.progress.isRunning ? "Running" : "Idle"))
+                if model.audioVideoMetrics.skippedProvider > 0 {
+                    StatusPill(text: "A/V provider skipped: \(model.audioVideoMetrics.skippedProvider)")
+                        .accessibilityIdentifier("settingsAudioVideoSkippedProviderPill")
+                }
                 if let lastIndexed = model.progress.lastIndexedAt {
                     Text("Last indexed: \(lastIndexed.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
@@ -146,6 +168,11 @@ struct SettingsWindow: View {
                     Text("Image/PDF last indexed: \(lastImagePDFIndexed.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("settingsImagePDFLastIndexedText")
+                }
+                if let lastAudioVideoIndexed = model.audioVideoMetrics.lastIndexedAt {
+                    Text("A/V last indexed: \(lastAudioVideoIndexed.formatted(date: .abbreviated, time: .shortened))")
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settingsAudioVideoLastIndexedText")
                 }
                 Spacer()
             }
@@ -159,7 +186,13 @@ struct SettingsWindow: View {
                     .accessibilityIdentifier("settingsResumeIndexingButton")
                 Button("Cancel Active Work", role: .destructive) { model.cancelActiveIndexing() }
                     .accessibilityIdentifier("settingsCancelIndexingButton")
+                Button("Rebuild Queue") { model.rebuildQueue() }
+                    .accessibilityIdentifier("settingsRebuildQueueButton")
                 Spacer()
+            }
+
+            FailureDashboardView(failures: model.failures) { failure, action in
+                model.performFailureAction(failure, action: action)
             }
         }
     }
@@ -190,12 +223,20 @@ struct SettingsWindow: View {
                         HStack {
                             StatusPill(text: provider.locality.rawValue)
                             StatusPill(text: provider.transportState.rawValue)
+                            StatusPill(text: provider.lastHealthStatus.rawValue)
+                            StatusPill(text: provider.credentialState.rawValue)
                             Toggle("Automatic indexing", isOn: Binding(
                                 get: { provider.automaticIndexingEnabled },
                                 set: { model.setProvider(provider, automaticIndexing: $0) }
                             ))
-                            .disabled(provider.locality == .remote)
+                            .disabled(provider.locality != .localLoopback)
                             Spacer()
+                        }
+                        if provider.locality != .localLoopback {
+                            Text("Remote AI can receive selected file content or derived text when indexing. Keep this off unless you trust the endpoint. LocalLens never enables remote AI automatically.")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                                .accessibilityIdentifier("settingsRemoteProviderWarning")
                         }
                     }
                     .padding(10)
@@ -220,16 +261,34 @@ struct SettingsWindow: View {
                     .textSelection(.enabled)
                 Text("Indexed assets: \(model.indexedAssetCount)")
                     .font(.headline)
+                Text("Local index/cache size: \(model.storageUsage.formattedTotal)")
+                    .font(.headline)
+                    .accessibilityIdentifier("settingsStorageUsageText")
             }
             .accessibilityIdentifier("settingsPrivacyStorageSummary")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Keyboard shortcuts", systemImage: "keyboard")
+                    .font(.headline)
+                ShortcutRow(title: "Preview selected result", shortcut: "Space")
+                ShortcutRow(title: "Reveal in Finder", shortcut: "⌘⇧R")
+                ShortcutRow(title: "Open in default app", shortcut: "⌘O")
+                ShortcutRow(title: "Copy source path", shortcut: "⌥⌘C")
+                ShortcutRow(title: "Copy snippet", shortcut: "⌘⇧C")
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .accessibilityIdentifier("settingsShortcutsSummary")
 
             HStack {
                 Button("Refresh") { model.refresh() }
                     .accessibilityIdentifier("settingsStorageRefreshButton")
                 Button("Delete Local Index", role: .destructive) { model.deleteLocalIndex() }
                     .accessibilityIdentifier("settingsDeleteIndexButton")
-                Button("Rebuild Index") { model.noteUnavailable("Rebuild index will be enabled when folder discovery and indexing orchestration are wired.") }
+                Button("Rebuild Index") { model.rebuildIndex() }
                     .accessibilityIdentifier("settingsRebuildIndexButton")
+                Button("Cleanup Cache") { model.cleanupCache() }
+                    .accessibilityIdentifier("settingsCleanupCacheButton")
                 Spacer()
             }
         }
@@ -251,27 +310,10 @@ struct SettingsWindow: View {
                 .textSelection(.enabled)
                 .accessibilityIdentifier("settingsDiagnosticsRedactionSummary")
 
-            if model.failures.isEmpty {
-                EmptySettingsState(title: "No unresolved failures", message: "Failures will appear here with safe categories, retryability, and recovery actions.")
-                    .accessibilityIdentifier("settingsDiagnosticsEmptyState")
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(model.failures) { failure in
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(failure.category.rawValue).font(.headline)
-                                Text(failure.safeMessage).foregroundStyle(.secondary)
-                                Text("Retryability: \(failure.retryability.rawValue)").font(.caption)
-                            }
-                            Spacer()
-                            Button("Mark Resolved") { model.resolveFailure(failure) }
-                        }
-                        .padding(10)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    }
-                }
-                .accessibilityIdentifier("settingsFailuresList")
+            FailureDashboardView(failures: model.failures) { failure, action in
+                model.performFailureAction(failure, action: action)
             }
+            .accessibilityIdentifier(model.failures.isEmpty ? "settingsDiagnosticsEmptyState" : "settingsFailuresList")
         }
     }
 }
@@ -282,9 +324,11 @@ private final class SettingsWindowModel: ObservableObject {
     @Published var providers: [ProviderSetting] = []
     @Published var failures: [IndexFailure] = []
     @Published var progress = IndexProgressSnapshot()
-    @Published var imagePDFMetrics = ImagePDFIndexingMetrics()
+    @Published var imagePDFMetrics = MediaIndexingMetrics()
+    @Published var audioVideoMetrics = MediaIndexingMetrics()
     @Published var indexedAssetCount = 0
-    @Published var diagnosticSummary = "Diagnostics redact full paths, transcripts, extracted text, credentials, thumbnails, and raw provider bodies."
+    @Published var storageUsage = StorageUsageSnapshot(databaseBytes: 0, cacheBytes: 0, indexedAssetCount: 0, queuedJobCount: 0)
+    @Published var diagnosticSummary = "Diagnostics redact full paths, transcripts, extracted text, credentials, thumbnails, prompts, and raw provider bodies."
     @Published var statusMessage: String?
 
     private weak var dependencies: DependencyContainer?
@@ -305,8 +349,10 @@ private final class SettingsWindowModel: ObservableObject {
                 self.providers = try await self.loadProviders(from: dependencies)
                 self.failures = try await dependencies.storage.failures.unresolved()
                 self.progress = await dependencies.indexQueue.snapshot()
-                self.imagePDFMetrics = try await Self.loadImagePDFMetrics(from: dependencies.storage.assets)
+                self.imagePDFMetrics = try await Self.loadMetrics(from: dependencies.storage.assets, mediaTypes: [.image, .pdf])
+                self.audioVideoMetrics = try await Self.loadMetrics(from: dependencies.storage.assets, mediaTypes: [.audio, .video])
                 self.indexedAssetCount = try await dependencies.storage.maintenance.indexedAssetCount()
+                self.storageUsage = try await dependencies.storage.maintenance.storageUsage()
                 self.diagnosticSummary = dependencies.diagnosticExporter.exportSummary()
                     .map { "\($0.key): \($0.value)" }
                     .sorted()
@@ -431,6 +477,48 @@ private final class SettingsWindowModel: ObservableObject {
         }
     }
 
+    func rebuildIndex() {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies] in
+            guard let self else { return }
+            do {
+                try await dependencies.storage.maintenance.rebuildIndexData()
+                self.statusMessage = "Rebuild index queued from watched folders."
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to rebuild index: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func rebuildQueue() {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies] in
+            guard let self else { return }
+            do {
+                try await dependencies.indexCoordinator.rebuildQueue(storage: dependencies.storage, queue: dependencies.indexQueue)
+                self.statusMessage = "Indexing queue rebuilt from watched folders."
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to rebuild queue: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func cleanupCache() {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies] in
+            guard let self else { return }
+            do {
+                try await dependencies.storage.maintenance.cleanupCacheData()
+                self.statusMessage = "Derived cache cleaned. Source media files were not modified."
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to cleanup cache: \(error.localizedDescription)"
+            }
+        }
+    }
+
     func exportDiagnosticsSummary() {
         guard let dependencies else { return }
         diagnosticSummary = dependencies.diagnosticExporter.exportSummary()
@@ -438,6 +526,33 @@ private final class SettingsWindowModel: ObservableObject {
             .sorted()
             .joined(separator: "\n")
         statusMessage = "Redacted diagnostic summary prepared."
+    }
+
+    func performFailureAction(_ failure: IndexFailure, action: FailureRecoveryAction) {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies] in
+            guard let self else { return }
+            do {
+                switch action {
+                case .retry:
+                    try await dependencies.indexCoordinator.retryFailure(failure, storage: dependencies.storage, queue: dependencies.indexQueue)
+                    self.statusMessage = "Retry queued for failed item."
+                case .ignore:
+                    try await dependencies.indexCoordinator.ignoreFailure(failure, storage: dependencies.storage)
+                    self.statusMessage = "Failure ignored."
+                case .reauthorize:
+                    self.statusMessage = "Open Folders and use Reauthorize for the affected folder."
+                case .rebuildIndex:
+                    try await dependencies.indexCoordinator.rebuildQueue(storage: dependencies.storage, queue: dependencies.indexQueue)
+                    self.statusMessage = "Rebuild queued."
+                case .none:
+                    self.statusMessage = "No recovery action is available for this failure."
+                }
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to perform recovery action: \(error.localizedDescription)"
+            }
+        }
     }
 
     func resolveFailure(_ failure: IndexFailure) {
@@ -481,24 +596,26 @@ private final class SettingsWindowModel: ObservableObject {
         return defaults
     }
 
-    private static func loadImagePDFMetrics(from assetsRepository: any MediaAssetRepository) async throws -> ImagePDFIndexingMetrics {
+    private static func loadMetrics(from assetsRepository: any MediaAssetRepository, mediaTypes: Set<MediaType>) async throws -> MediaIndexingMetrics {
         let assets = try await assetsRepository.list(watchedFolderID: nil)
-            .filter { $0.mediaType == .image || $0.mediaType == .pdf }
-        return ImagePDFIndexingMetrics(
+            .filter { mediaTypes.contains($0.mediaType) }
+        return MediaIndexingMetrics(
             total: assets.count,
             complete: assets.filter { $0.indexState == .complete }.count,
             partial: assets.filter { $0.indexState == .partial }.count,
             failed: assets.filter { $0.indexState == .failed }.count,
+            skippedProvider: assets.filter { $0.indexState == .partial }.count,
             lastIndexedAt: assets.compactMap(\.lastIndexedAt).max()
         )
     }
 }
 
-private struct ImagePDFIndexingMetrics: Equatable {
+private struct MediaIndexingMetrics: Equatable {
     var total: Int = 0
     var complete: Int = 0
     var partial: Int = 0
     var failed: Int = 0
+    var skippedProvider: Int = 0
     var lastIndexedAt: Date?
 }
 
@@ -569,6 +686,24 @@ private struct StatusPill: View {
     }
 }
 
+private struct ShortcutRow: View {
+    let title: String
+    let shortcut: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(shortcut)
+                .font(.caption.monospaced())
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 5))
+        }
+        .font(.caption)
+    }
+}
+
 private struct EmptySettingsState: View {
     let title: String
     let message: String
@@ -583,3 +718,4 @@ private struct EmptySettingsState: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 }
+

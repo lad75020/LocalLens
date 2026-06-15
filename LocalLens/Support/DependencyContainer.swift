@@ -41,6 +41,7 @@ public final class DependencyContainer: ObservableObject {
     public let quickLookPreviewService: QuickLookPreviewService
     public let finderRevealService: FinderRevealService
     public let clipboardActionService: ClipboardActionService
+    public let resultActionService: ResultActionService
     public let diagnosticExporter: DiagnosticExporter
     public let privacyAudit: PrivacyAudit
     public let settingsWindowPresenter: SettingsWindowPresenter
@@ -107,6 +108,11 @@ public final class DependencyContainer: ObservableObject {
         self.quickLookPreviewService = QuickLookPreviewService()
         self.finderRevealService = FinderRevealService()
         self.clipboardActionService = ClipboardActionService()
+        self.resultActionService = ResultActionService(
+            quickLookPreviewService: quickLookPreviewService,
+            finderRevealService: finderRevealService,
+            clipboardActionService: clipboardActionService
+        )
         self.diagnosticExporter = DiagnosticExporter()
         self.privacyAudit = PrivacyAudit()
         self.settingsWindowPresenter = SettingsWindowPresenter()
