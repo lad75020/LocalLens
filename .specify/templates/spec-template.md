@@ -93,6 +93,16 @@
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
 
+### Constitutional Requirements *(mandatory for file-system or AI features)*
+
+- **CA-001 File Authority**: Specify every file root, file type, and file operation the feature needs. State whether the feature reads, writes, renames, moves, deletes, exports, or only indexes/previews files.
+- **CA-002 Local/Remote AI**: State whether inference is local-only, remote-capable, or remote-required. For any remote provider, specify opt-in UX, transmitted data classes, endpoint security, and default-off behavior.
+- **CA-003 Privacy & Retention**: State what extracted text, transcripts, thumbnails, embeddings, prompts, and metadata are stored locally and how the user can delete or rebuild them.
+- **CA-004 Non-Destructive Guarantee**: State whether source files remain unmodified. Any mutation requires confirmation, undo/recovery, and explicit acceptance scenarios.
+- **CA-005 Failure & Recovery**: Define behavior for permission denial, missing files, moved folders, external drives, corrupted media, model failure, cancellation, and app restart.
+- **CA-006 Performance Bounds**: Define expected limits for concurrency, memory use, large files/folders, video sampling, transcription, indexing latency, or search latency.
+- **CA-007 Observability**: Define safe progress, error, retry, and diagnostic requirements without exposing sensitive file contents by default.
+
 *Example of marking unclear requirements:*
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
