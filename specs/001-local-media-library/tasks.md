@@ -102,21 +102,21 @@
 
 ### Tests for User Story 2 (Mandatory)
 
-- [ ] T045 [P] [US2] Create XCTest for bounded thumbnail generation across images and PDFs in `LocalLensTests/ExtractorTests/ThumbnailServiceTests.swift`
-- [ ] T046 [P] [US2] Create XCTest for image OCR, dimensions, visual labels, and corrupt image failure categories in `LocalLensTests/ExtractorTests/ImageExtractorTests.swift`
-- [ ] T047 [P] [US2] Create XCTest for PDF selectable text, image-page OCR fallback, page count, password-protected PDFs, and partial page failures in `LocalLensTests/ExtractorTests/PDFExtractorTests.swift`
-- [ ] T048 [P] [US2] Create XCTest for chunk creation, FTS insertion, embedding fallback, and complete/partial asset commits for image/PDF records in `LocalLensTests/IndexingTests/ImagePDFIndexingPipelineTests.swift`
+- [X] T045 [P] [US2] Create XCTest for bounded thumbnail generation across images and PDFs in `LocalLensTests/ExtractorTests/ThumbnailServiceTests.swift`
+- [X] T046 [P] [US2] Create XCTest for image OCR, dimensions, visual labels, and corrupt image failure categories in `LocalLensTests/ExtractorTests/ImageExtractorTests.swift`
+- [X] T047 [P] [US2] Create XCTest for PDF selectable text, image-page OCR fallback, page count, password-protected PDFs, and partial page failures in `LocalLensTests/ExtractorTests/PDFExtractorTests.swift`
+- [X] T048 [P] [US2] Create XCTest for chunk creation, FTS insertion, embedding fallback, and complete/partial asset commits for image/PDF records in `LocalLensTests/IndexingTests/ImagePDFIndexingPipelineTests.swift`
 
 ### Implementation for User Story 2
 
-- [ ] T049 [P] [US2] Define extractor protocols, extraction result types, and safe error mapping in `LocalLens/Extractors/ExtractorProtocols.swift`
-- [ ] T050 [P] [US2] Implement bounded image/PDF thumbnail generation with cache writes under Application Support in `LocalLens/Extractors/ThumbnailService.swift`
-- [ ] T051 [US2] Implement image metadata extraction, Vision OCR, visual label extraction, and corrupt file handling in `LocalLens/Extractors/ImageExtractor.swift`
-- [ ] T052 [US2] Implement PDFKit page count, selectable text extraction, bounded image-page OCR, and password/partial failure handling in `LocalLens/Extractors/PDFExtractor.swift`
-- [ ] T053 [US2] Implement searchable chunk builder for filenames, OCR text, PDF text, visual labels, page context, and bounded text chunks in `LocalLens/Indexing/SearchableChunkBuilder.swift`
-- [ ] T054 [US2] Implement embedding job stage with local provider fallback and no-provider graceful degradation in `LocalLens/Indexing/EmbeddingStageService.swift`
-- [ ] T055 [US2] Integrate image/PDF stages into IndexCoordinator with durable complete, partial, failed, and cancelled commits in `LocalLens/Indexing/IndexCoordinator.swift`
-- [ ] T056 [US2] Add Settings indexing state for image/PDF stage counts and last indexed time in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T049 [P] [US2] Define extractor protocols, extraction result types, and safe error mapping in `LocalLens/Extractors/ExtractorProtocols.swift`
+- [X] T050 [P] [US2] Implement bounded image/PDF thumbnail generation with cache writes under Application Support in `LocalLens/Extractors/ThumbnailService.swift`
+- [X] T051 [US2] Implement image metadata extraction, Vision OCR, visual label extraction, and corrupt file handling in `LocalLens/Extractors/ImageExtractor.swift`
+- [X] T052 [US2] Implement PDFKit page count, selectable text extraction, bounded image-page OCR, and password/partial failure handling in `LocalLens/Extractors/PDFExtractor.swift`
+- [X] T053 [US2] Implement searchable chunk builder for filenames, OCR text, PDF text, visual labels, page context, and bounded text chunks in `LocalLens/Indexing/SearchableChunkBuilder.swift`
+- [X] T054 [US2] Implement embedding job stage with local provider fallback and no-provider graceful degradation in `LocalLens/Indexing/EmbeddingStageService.swift`
+- [X] T055 [US2] Integrate image/PDF stages into IndexCoordinator with durable complete, partial, failed, and cancelled commits in `LocalLens/Indexing/IndexCoordinator.swift`
+- [X] T056 [US2] Add Settings indexing state for image/PDF stage counts and last indexed time in `LocalLens/AppShell/SettingsWindow.swift`
 
 **Checkpoint**: User Story 2 delivers the image/PDF alpha cutline.
 

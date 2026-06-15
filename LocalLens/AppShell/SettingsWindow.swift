@@ -129,6 +129,10 @@ struct SettingsWindow: View {
                 MetricCard(title: "Completed", value: "\(model.progress.completedCount)")
                 MetricCard(title: "Failed", value: "\(model.progress.failedCount)")
                 MetricCard(title: "Cancelled", value: "\(model.progress.cancelledCount)")
+                MetricCard(title: "Image/PDF", value: "\(model.imagePDFMetrics.total)")
+                MetricCard(title: "Image/PDF Complete", value: "\(model.imagePDFMetrics.complete)")
+                MetricCard(title: "Image/PDF Partial", value: "\(model.imagePDFMetrics.partial)")
+                MetricCard(title: "Image/PDF Failed", value: "\(model.imagePDFMetrics.failed)")
             }
             .accessibilityIdentifier("settingsIndexingMetrics")
 
@@ -137,6 +141,11 @@ struct SettingsWindow: View {
                 if let lastIndexed = model.progress.lastIndexedAt {
                     Text("Last indexed: \(lastIndexed.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
+                }
+                if let lastImagePDFIndexed = model.imagePDFMetrics.lastIndexedAt {
+                    Text("Image/PDF last indexed: \(lastImagePDFIndexed.formatted(date: .abbreviated, time: .shortened))")
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settingsImagePDFLastIndexedText")
                 }
                 Spacer()
             }
@@ -273,6 +282,7 @@ private final class SettingsWindowModel: ObservableObject {
     @Published var providers: [ProviderSetting] = []
     @Published var failures: [IndexFailure] = []
     @Published var progress = IndexProgressSnapshot()
+    @Published var imagePDFMetrics = ImagePDFIndexingMetrics()
     @Published var indexedAssetCount = 0
     @Published var diagnosticSummary = "Diagnostics redact full paths, transcripts, extracted text, credentials, thumbnails, and raw provider bodies."
     @Published var statusMessage: String?
@@ -295,6 +305,7 @@ private final class SettingsWindowModel: ObservableObject {
                 self.providers = try await self.loadProviders(from: dependencies)
                 self.failures = try await dependencies.storage.failures.unresolved()
                 self.progress = await dependencies.indexQueue.snapshot()
+                self.imagePDFMetrics = try await Self.loadImagePDFMetrics(from: dependencies.storage.assets)
                 self.indexedAssetCount = try await dependencies.storage.maintenance.indexedAssetCount()
                 self.diagnosticSummary = dependencies.diagnosticExporter.exportSummary()
                     .map { "\($0.key): \($0.value)" }
@@ -469,6 +480,26 @@ private final class SettingsWindowModel: ObservableObject {
         }
         return defaults
     }
+
+    private static func loadImagePDFMetrics(from assetsRepository: any MediaAssetRepository) async throws -> ImagePDFIndexingMetrics {
+        let assets = try await assetsRepository.list(watchedFolderID: nil)
+            .filter { $0.mediaType == .image || $0.mediaType == .pdf }
+        return ImagePDFIndexingMetrics(
+            total: assets.count,
+            complete: assets.filter { $0.indexState == .complete }.count,
+            partial: assets.filter { $0.indexState == .partial }.count,
+            failed: assets.filter { $0.indexState == .failed }.count,
+            lastIndexedAt: assets.compactMap(\.lastIndexedAt).max()
+        )
+    }
+}
+
+private struct ImagePDFIndexingMetrics: Equatable {
+    var total: Int = 0
+    var complete: Int = 0
+    var partial: Int = 0
+    var failed: Int = 0
+    var lastIndexedAt: Date?
 }
 
 private struct SettingsPane<Content: View>: View {
