@@ -86,6 +86,7 @@ public struct SearchRanker: Sendable {
             pageNumber: bestChunk?.pageNumber,
             timestampStart: bestChunk?.timestampStart,
             timestampEnd: bestChunk?.timestampEnd,
+            durationSeconds: candidate.asset.durationSeconds,
             isMissing: candidate.asset.indexState == .missing || candidate.asset.indexState == .stale
         )
     }

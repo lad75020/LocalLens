@@ -164,9 +164,10 @@ public struct SearchResultDTO: Identifiable, Sendable, Equatable {
     public let pageNumber: Int?
     public let timestampStart: Double?
     public let timestampEnd: Double?
+    public let durationSeconds: Double?
     public let isMissing: Bool
 
-    public init(id: UUID = UUID(), assetID: UUID, filename: String, mediaType: MediaType, folderContext: String, thumbnailID: UUID?, score: Double, matchReasons: [MatchReason], snippet: String?, pageNumber: Int?, timestampStart: Double?, timestampEnd: Double?, isMissing: Bool) {
+    public init(id: UUID = UUID(), assetID: UUID, filename: String, mediaType: MediaType, folderContext: String, thumbnailID: UUID?, score: Double, matchReasons: [MatchReason], snippet: String?, pageNumber: Int?, timestampStart: Double?, timestampEnd: Double?, durationSeconds: Double? = nil, isMissing: Bool) {
         self.id = id
         self.assetID = assetID
         self.filename = filename
@@ -179,6 +180,7 @@ public struct SearchResultDTO: Identifiable, Sendable, Equatable {
         self.pageNumber = pageNumber
         self.timestampStart = timestampStart
         self.timestampEnd = timestampEnd
+        self.durationSeconds = durationSeconds
         self.isMissing = isMissing
     }
 }

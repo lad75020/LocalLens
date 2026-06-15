@@ -27,9 +27,25 @@ final class SearchPopoverUITests: LocalLensUITestBase {
         app.typeKey(.downArrow, modifierFlags: [])
         XCTAssertTrue(app.otherElements["searchResultsList"].exists || app.scrollViews["searchResultsList"].exists)
 
+        XCTAssertTrue(app.buttons["Preview"].waitForExistence(timeout: 5))
+        app.buttons["Preview"].click()
+        XCTAssertTrue(app.staticTexts["Preview opened."].waitForExistence(timeout: 5))
+
+        app.typeKey("r", modifierFlags: [.command, .shift])
+        XCTAssertTrue(app.staticTexts["Revealed in Finder."].waitForExistence(timeout: 5))
+
+        app.buttons["Copy Snippet"].click()
+        XCTAssertTrue(app.staticTexts["Snippet copied."].waitForExistence(timeout: 5))
+        app.buttons["Copy Path"].click()
+        XCTAssertTrue(app.staticTexts["Source path copied."].waitForExistence(timeout: 5))
+
         app.buttons["Clear search"].click()
         field.click()
         field.typeText("nomatchingphrase")
         XCTAssertTrue(app.staticTexts["No results"].waitForExistence(timeout: 8))
+
+        app.buttons["settingsButton"].click()
+        XCTAssertTrue(app.windows["LocalLens Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Shortcuts: Space preview • ⌘⇧R reveal • ⌘O open • ⌥⌘C path • ⌘⇧C snippet"].waitForExistence(timeout: 5))
     }
 }

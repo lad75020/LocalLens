@@ -158,17 +158,17 @@
 
 ### Tests for User Story 4 (Mandatory)
 
-- [ ] T069 [P] [US4] Create XCTest for audio duration metadata, local transcript chunks, provider unavailable fallback, and corrupt audio failure categories in `LocalLensTests/ExtractorTests/AudioTranscriptExtractorTests.swift`
-- [ ] T070 [P] [US4] Create XCTest for video duration metadata, representative keyframes, sampled frame OCR/labels, audio track transcript, and large-video sampling bounds in `LocalLensTests/ExtractorTests/VideoSceneExtractorTests.swift`
-- [ ] T071 [P] [US4] Create XCTest for audio/video index pipeline partial states, timestamped chunks, provider timeouts, and no source mutation in `LocalLensTests/IndexingTests/AudioVideoIndexingPipelineTests.swift`
+- [X] T069 [P] [US4] Create XCTest for audio duration metadata, local transcript chunks, provider unavailable fallback, and corrupt audio failure categories in `LocalLensTests/ExtractorTests/AudioTranscriptExtractorTests.swift`
+- [X] T070 [P] [US4] Create XCTest for video duration metadata, representative keyframes, sampled frame OCR/labels, audio track transcript, and large-video sampling bounds in `LocalLensTests/ExtractorTests/VideoSceneExtractorTests.swift`
+- [X] T071 [P] [US4] Create XCTest for audio/video index pipeline partial states, timestamped chunks, provider timeouts, and no source mutation in `LocalLensTests/IndexingTests/AudioVideoIndexingPipelineTests.swift`
 
 ### Implementation for User Story 4
 
-- [ ] T072 [P] [US4] Implement audio duration metadata extraction, bounded transcript provider calls, timestamped transcript chunk mapping, and failure categories in `LocalLens/Extractors/AudioTranscriptExtractor.swift`
-- [ ] T073 [P] [US4] Implement video duration metadata, keyframe thumbnail extraction, bounded frame sampling, frame OCR/labels, audio-track transcription coordination, and failure categories in `LocalLens/Extractors/VideoSceneExtractor.swift`
-- [ ] T074 [US4] Integrate audio/video extractor stages, timestamped chunk storage, sampled scene metadata, and complete/partial commits into IndexCoordinator in `LocalLens/Indexing/IndexCoordinator.swift`
-- [ ] T075 [US4] Add audio/video indexing progress, skipped-provider messaging, and stage counts to Settings indexing UI in `LocalLens/AppShell/SettingsWindow.swift`
-- [ ] T076 [US4] Extend search result rendering for audio/video duration and timestamp jump hints in `LocalLens/AppShell/SearchPopoverView.swift`
+- [X] T072 [P] [US4] Implement audio duration metadata extraction, bounded transcript provider calls, timestamped transcript chunk mapping, and failure categories in `LocalLens/Extractors/AudioTranscriptExtractor.swift`
+- [X] T073 [P] [US4] Implement video duration metadata, keyframe thumbnail extraction, bounded frame sampling, frame OCR/labels, audio-track transcription coordination, and failure categories in `LocalLens/Extractors/VideoSceneExtractor.swift`
+- [X] T074 [US4] Integrate audio/video extractor stages, timestamped chunk storage, sampled scene metadata, and complete/partial commits into IndexCoordinator in `LocalLens/Indexing/IndexCoordinator.swift`
+- [X] T075 [US4] Add audio/video indexing progress, skipped-provider messaging, and stage counts to Settings indexing UI in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T076 [US4] Extend search result rendering for audio/video duration and timestamp jump hints in `LocalLens/AppShell/SearchPopoverView.swift`
 
 **Checkpoint**: User Story 4 adds the full mixed-media promise behind existing indexing/search foundations.
 
@@ -182,17 +182,17 @@
 
 ### Tests for User Story 5 (Mandatory)
 
-- [ ] T077 [P] [US5] Create XCTest for Quick Look preview URL validation and missing-file behavior in `LocalLensTests/PreviewActionTests/QuickLookPreviewServiceTests.swift`
-- [ ] T078 [P] [US5] Create XCTest for Finder reveal, default open, copy path, copy snippet, and source byte preservation in `LocalLensTests/PreviewActionTests/ResultActionServiceTests.swift`
-- [ ] T079 [P] [US5] Create UI test for keyboard-driven result selection, Space preview, reveal shortcut, copy actions, and Settings shortcut visibility in `LocalLensUITests/SearchPopoverUITests.swift`
+- [X] T077 [P] [US5] Create XCTest for Quick Look preview URL validation and missing-file behavior in `LocalLensTests/PreviewActionTests/QuickLookPreviewServiceTests.swift`
+- [X] T078 [P] [US5] Create XCTest for Finder reveal, default open, copy path, copy snippet, and source byte preservation in `LocalLensTests/PreviewActionTests/ResultActionServiceTests.swift`
+- [X] T079 [P] [US5] Create UI test for keyboard-driven result selection, Space preview, reveal shortcut, copy actions, and Settings shortcut visibility in `LocalLensUITests/SearchPopoverUITests.swift`
 
 ### Implementation for User Story 5
 
-- [ ] T080 [P] [US5] Implement Quick Look preview service with security-scoped access, missing-file checks, and no source writes in `LocalLens/PreviewActions/QuickLookPreviewService.swift`
-- [ ] T081 [P] [US5] Implement Finder reveal, system open, clipboard path copy, and bounded snippet copy services in `LocalLens/PreviewActions/FinderRevealService.swift`
-- [ ] T082 [P] [US5] Implement shared clipboard result action service with redacted snippet bounds in `LocalLens/PreviewActions/ClipboardActionService.swift`
-- [ ] T083 [US5] Add result action commands, keyboard shortcuts, disabled states, and toast feedback to `LocalLens/AppShell/AppCommands.swift`
-- [ ] T084 [US5] Add floating Liquid Glass result action bar and per-result action menu to `LocalLens/AppShell/SearchPopoverView.swift`
+- [X] T080 [P] [US5] Implement Quick Look preview service with security-scoped access, missing-file checks, and no source writes in `LocalLens/PreviewActions/QuickLookPreviewService.swift`
+- [X] T081 [P] [US5] Implement Finder reveal, system open, clipboard path copy, and bounded snippet copy services in `LocalLens/PreviewActions/FinderRevealService.swift`
+- [X] T082 [P] [US5] Implement shared clipboard result action service with redacted snippet bounds in `LocalLens/PreviewActions/ClipboardActionService.swift`
+- [X] T083 [US5] Add result action commands, keyboard shortcuts, disabled states, and toast feedback to `LocalLens/AppShell/AppCommands.swift`
+- [X] T084 [US5] Add floating Liquid Glass result action bar and per-result action menu to `LocalLens/AppShell/SearchPopoverView.swift`
 
 **Checkpoint**: User Story 5 makes search results immediately actionable.
 

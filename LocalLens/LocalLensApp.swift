@@ -19,6 +19,9 @@ struct LocalLensApp: App {
                 .environmentObject(dependencies)
         }
         .menuBarExtraStyle(.window)
+        .commands {
+            AppCommands(viewModel: dependencies.searchResultViewModel)
+        }
     }
 
     private static func resetUITestingState() {

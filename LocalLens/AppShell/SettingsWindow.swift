@@ -76,6 +76,13 @@ struct SettingsWindow: View {
                 Spacer()
             }
 
+            Text("Shortcuts: Space preview • ⌘⇧R reveal • ⌘O open • ⌥⌘C path • ⌘⇧C snippet")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(8)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .accessibilityIdentifier("settingsShortcutsSummary")
+
             if model.folders.isEmpty {
                 EmptySettingsState(
                     title: "No watched folders yet",
@@ -133,11 +140,19 @@ struct SettingsWindow: View {
                 MetricCard(title: "Image/PDF Complete", value: "\(model.imagePDFMetrics.complete)")
                 MetricCard(title: "Image/PDF Partial", value: "\(model.imagePDFMetrics.partial)")
                 MetricCard(title: "Image/PDF Failed", value: "\(model.imagePDFMetrics.failed)")
+                MetricCard(title: "Audio/Video", value: "\(model.audioVideoMetrics.total)")
+                MetricCard(title: "A/V Complete", value: "\(model.audioVideoMetrics.complete)")
+                MetricCard(title: "A/V Partial", value: "\(model.audioVideoMetrics.partial)")
+                MetricCard(title: "A/V Failed", value: "\(model.audioVideoMetrics.failed)")
             }
             .accessibilityIdentifier("settingsIndexingMetrics")
 
             HStack {
                 StatusPill(text: model.progress.isPaused ? "Paused" : (model.progress.isRunning ? "Running" : "Idle"))
+                if model.audioVideoMetrics.skippedProvider > 0 {
+                    StatusPill(text: "A/V provider skipped: \(model.audioVideoMetrics.skippedProvider)")
+                        .accessibilityIdentifier("settingsAudioVideoSkippedProviderPill")
+                }
                 if let lastIndexed = model.progress.lastIndexedAt {
                     Text("Last indexed: \(lastIndexed.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
@@ -146,6 +161,11 @@ struct SettingsWindow: View {
                     Text("Image/PDF last indexed: \(lastImagePDFIndexed.formatted(date: .abbreviated, time: .shortened))")
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("settingsImagePDFLastIndexedText")
+                }
+                if let lastAudioVideoIndexed = model.audioVideoMetrics.lastIndexedAt {
+                    Text("A/V last indexed: \(lastAudioVideoIndexed.formatted(date: .abbreviated, time: .shortened))")
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settingsAudioVideoLastIndexedText")
                 }
                 Spacer()
             }
@@ -223,6 +243,19 @@ struct SettingsWindow: View {
             }
             .accessibilityIdentifier("settingsPrivacyStorageSummary")
 
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Keyboard shortcuts", systemImage: "keyboard")
+                    .font(.headline)
+                ShortcutRow(title: "Preview selected result", shortcut: "Space")
+                ShortcutRow(title: "Reveal in Finder", shortcut: "⌘⇧R")
+                ShortcutRow(title: "Open in default app", shortcut: "⌘O")
+                ShortcutRow(title: "Copy source path", shortcut: "⌥⌘C")
+                ShortcutRow(title: "Copy snippet", shortcut: "⌘⇧C")
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .accessibilityIdentifier("settingsShortcutsSummary")
+
             HStack {
                 Button("Refresh") { model.refresh() }
                     .accessibilityIdentifier("settingsStorageRefreshButton")
@@ -282,7 +315,8 @@ private final class SettingsWindowModel: ObservableObject {
     @Published var providers: [ProviderSetting] = []
     @Published var failures: [IndexFailure] = []
     @Published var progress = IndexProgressSnapshot()
-    @Published var imagePDFMetrics = ImagePDFIndexingMetrics()
+    @Published var imagePDFMetrics = MediaIndexingMetrics()
+    @Published var audioVideoMetrics = MediaIndexingMetrics()
     @Published var indexedAssetCount = 0
     @Published var diagnosticSummary = "Diagnostics redact full paths, transcripts, extracted text, credentials, thumbnails, and raw provider bodies."
     @Published var statusMessage: String?
@@ -305,7 +339,8 @@ private final class SettingsWindowModel: ObservableObject {
                 self.providers = try await self.loadProviders(from: dependencies)
                 self.failures = try await dependencies.storage.failures.unresolved()
                 self.progress = await dependencies.indexQueue.snapshot()
-                self.imagePDFMetrics = try await Self.loadImagePDFMetrics(from: dependencies.storage.assets)
+                self.imagePDFMetrics = try await Self.loadMetrics(from: dependencies.storage.assets, mediaTypes: [.image, .pdf])
+                self.audioVideoMetrics = try await Self.loadMetrics(from: dependencies.storage.assets, mediaTypes: [.audio, .video])
                 self.indexedAssetCount = try await dependencies.storage.maintenance.indexedAssetCount()
                 self.diagnosticSummary = dependencies.diagnosticExporter.exportSummary()
                     .map { "\($0.key): \($0.value)" }
@@ -481,24 +516,26 @@ private final class SettingsWindowModel: ObservableObject {
         return defaults
     }
 
-    private static func loadImagePDFMetrics(from assetsRepository: any MediaAssetRepository) async throws -> ImagePDFIndexingMetrics {
+    private static func loadMetrics(from assetsRepository: any MediaAssetRepository, mediaTypes: Set<MediaType>) async throws -> MediaIndexingMetrics {
         let assets = try await assetsRepository.list(watchedFolderID: nil)
-            .filter { $0.mediaType == .image || $0.mediaType == .pdf }
-        return ImagePDFIndexingMetrics(
+            .filter { mediaTypes.contains($0.mediaType) }
+        return MediaIndexingMetrics(
             total: assets.count,
             complete: assets.filter { $0.indexState == .complete }.count,
             partial: assets.filter { $0.indexState == .partial }.count,
             failed: assets.filter { $0.indexState == .failed }.count,
+            skippedProvider: assets.filter { $0.indexState == .partial }.count,
             lastIndexedAt: assets.compactMap(\.lastIndexedAt).max()
         )
     }
 }
 
-private struct ImagePDFIndexingMetrics: Equatable {
+private struct MediaIndexingMetrics: Equatable {
     var total: Int = 0
     var complete: Int = 0
     var partial: Int = 0
     var failed: Int = 0
+    var skippedProvider: Int = 0
     var lastIndexedAt: Date?
 }
 
@@ -566,6 +603,24 @@ private struct StatusPill: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(.thinMaterial, in: Capsule())
+    }
+}
+
+private struct ShortcutRow: View {
+    let title: String
+    let shortcut: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(shortcut)
+                .font(.caption.monospaced())
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 5))
+        }
+        .font(.caption)
     }
 }
 

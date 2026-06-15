@@ -16,6 +16,7 @@ public final class SearchResultViewModel: ObservableObject {
     @Published public private(set) var emptyState: EmptyState = .noQuery
     @Published public private(set) var isSearching = false
     @Published public private(set) var indexingStatusSummary = "Indexing stays local on this Mac."
+    @Published public private(set) var actionToast: String? = nil
 
     private weak var dependencies: DependencyContainer?
     private var searchTask: Task<Void, Never>?
@@ -91,6 +92,11 @@ public final class SearchResultViewModel: ObservableObject {
         selectedIndex = max((selectedIndex ?? results.count) - 1, 0)
     }
 
+    public func selectResult(at index: Int) {
+        guard results.indices.contains(index) else { return }
+        selectedIndex = index
+    }
+
     public var selectedResult: SearchResultDTO? {
         guard let selectedIndex, results.indices.contains(selectedIndex) else { return nil }
         return results[selectedIndex]
@@ -108,6 +114,32 @@ public final class SearchResultViewModel: ObservableObject {
                 self?.indexingStatusSummary = "Index status unavailable."
             }
         }
+    }
+
+    public func performSelectedAction(_ action: ResultActionKind) {
+        guard let dependencies else {
+            actionToast = "Actions are not ready yet."
+            return
+        }
+        guard let result = selectedResult else {
+            actionToast = ResultActionError.noSelection.localizedDescription
+            return
+        }
+        Task { @MainActor [weak self, dependencies] in
+            let outcome = await dependencies.resultActionService.perform(action, result: result, storage: dependencies.storage)
+            self?.actionToast = outcome.safeMessage
+        }
+    }
+
+    public func dismissActionToast() {
+        actionToast = nil
+    }
+
+    public func canPerformAction(_ action: ResultActionKind) -> Bool {
+        guard let selectedResult else { return false }
+        if selectedResult.isMissing, action != .copySnippet { return false }
+        if action == .copySnippet { return selectedResult.snippet?.isEmpty == false || !selectedResult.filename.isEmpty }
+        return true
     }
 
     private func runSearch(_ request: SearchRequest) async {
