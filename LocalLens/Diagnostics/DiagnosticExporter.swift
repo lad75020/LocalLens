@@ -7,6 +7,9 @@ public struct DiagnosticExport: Codable, Equatable, Sendable {
     public var createdAt: Date
     public var counts: DiagnosticCounts
     public var providerHealth: [DiagnosticProviderHealth]
+    public var officePreferences: DiagnosticOfficePreferences
+    public var providerModelSelections: [DiagnosticProviderModelSelection]
+    public var hermesProfile: DiagnosticHermesProfileSelection
     public var failureCategories: [DiagnosticFailureCategory]
     public var pathHashes: [String]
     public var redaction: DiagnosticRedaction
@@ -22,6 +25,24 @@ public struct DiagnosticProviderHealth: Codable, Equatable, Sendable {
     public var id: String
     public var locality: ProviderLocality
     public var status: ProviderHealthStatus
+}
+
+public struct DiagnosticOfficePreferences: Codable, Equatable, Sendable {
+    public var pptxEnabled: Bool
+    public var docxEnabled: Bool
+    public var xlsxEnabled: Bool
+}
+
+public struct DiagnosticProviderModelSelection: Codable, Equatable, Sendable {
+    public var providerID: String
+    public var selectedModelID: String?
+    public var availabilityState: ProviderSelectionAvailability
+}
+
+public struct DiagnosticHermesProfileSelection: Codable, Equatable, Sendable {
+    public var selectedProfileID: String?
+    public var selectedProfileDisplayName: String?
+    public var availabilityState: ProviderSelectionAvailability
 }
 
 public struct DiagnosticFailureCategory: Codable, Equatable, Sendable {
@@ -46,7 +67,7 @@ public struct DiagnosticExporter: Sendable {
 
     public func exportSummary() -> [String: String] {
         [
-            "redaction": "fullPaths hashed; transcripts/extractedText/credentials/prompts/thumbnails/rawProviderBodies omitted",
+            "redaction": "fullPaths hashed; transcripts/extractedText/officeText/credentials/prompts/thumbnails/rawProviderBodies omitted",
             "sourceFiles": "read-only; no source bytes included"
         ]
     }
@@ -55,6 +76,9 @@ public struct DiagnosticExporter: Sendable {
         let folders = try await storage.watchedFolders.list()
         let assets = try await storage.assets.list(watchedFolderID: nil)
         let failures = try await storage.failures.unresolved()
+        let officePreferences = try await storage.officePreferences.load()
+        let providerModelSelections = try await storage.providerModelSelections.list()
+        let hermesProfile = try await storage.hermesProfileSelection.load()
         let categoryCounts = Dictionary(grouping: failures, by: \.category)
             .map { DiagnosticFailureCategory(category: $0.key, count: $0.value.count) }
             .sorted { $0.category.rawValue < $1.category.rawValue }
@@ -65,6 +89,9 @@ public struct DiagnosticExporter: Sendable {
             createdAt: createdAt,
             counts: DiagnosticCounts(watchedFolders: folders.count, assets: assets.count, failures: failures.count),
             providerHealth: providers.map { DiagnosticProviderHealth(id: $0.id, locality: $0.locality, status: $0.lastHealthStatus) },
+            officePreferences: DiagnosticOfficePreferences(pptxEnabled: officePreferences.pptxEnabled, docxEnabled: officePreferences.docxEnabled, xlsxEnabled: officePreferences.xlsxEnabled),
+            providerModelSelections: providerModelSelections.map { DiagnosticProviderModelSelection(providerID: $0.providerID, selectedModelID: $0.selectedModelID, availabilityState: $0.availabilityState) },
+            hermesProfile: DiagnosticHermesProfileSelection(selectedProfileID: hermesProfile.selectedProfileID, selectedProfileDisplayName: hermesProfile.selectedProfileDisplayName, availabilityState: hermesProfile.availabilityState),
             failureCategories: categoryCounts,
             pathHashes: folders.map { Self.hashPath($0.displayPath) }.sorted(),
             redaction: DiagnosticRedaction()

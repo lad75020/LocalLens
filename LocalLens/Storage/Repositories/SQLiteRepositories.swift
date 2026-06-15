@@ -213,7 +213,7 @@ public actor SQLiteSearchableChunkRepository: SearchableChunkRepository {
         switch chunk.chunkType {
         case .filename: return [.text(chunk.id.uuidString), .text(chunk.text), empty, empty, empty, empty]
         case .visibleText: return [.text(chunk.id.uuidString), empty, .text(chunk.text), empty, empty, empty]
-        case .visualLabel, .semantic: return [.text(chunk.id.uuidString), empty, empty, .text(chunk.text), empty, empty]
+        case .visualLabel, .officeText, .officeSummary, .semantic: return [.text(chunk.id.uuidString), empty, empty, .text(chunk.text), empty, empty]
         case .transcript: return [.text(chunk.id.uuidString), empty, empty, empty, .text(chunk.text), empty]
         case .pdfText: return [.text(chunk.id.uuidString), empty, empty, empty, empty, .text(chunk.text)]
         }
@@ -351,10 +351,10 @@ public actor SQLiteProviderSettingsRepository: ProviderSettingsRepository {
         try await database.execute(
             """
             INSERT OR REPLACE INTO provider_settings
-            (id, display_name, base_url, is_enabled, automatic_indexing_enabled, locality, transport_state, credential_state, model_ids_json, last_health_check_at, last_health_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            (id, display_name, base_url, is_enabled, automatic_indexing_enabled, locality, transport_state, credential_state, model_ids_json, selected_model_id, last_health_check_at, last_health_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
-            bindings: [.text(setting.id), .text(setting.displayName), .text(setting.baseURL.absoluteString), .integer(setting.isEnabled ? 1 : 0), .integer(setting.automaticIndexingEnabled ? 1 : 0), .text(setting.locality.rawValue), .text(setting.transportState.rawValue), .text(setting.credentialState.rawValue), .text(models), date(setting.lastHealthCheckAt), .text(setting.lastHealthStatus.rawValue)]
+            bindings: [.text(setting.id), .text(setting.displayName), .text(setting.baseURL.absoluteString), .integer(setting.isEnabled ? 1 : 0), .integer(setting.automaticIndexingEnabled ? 1 : 0), .text(setting.locality.rawValue), .text(setting.transportState.rawValue), .text(setting.credentialState.rawValue), .text(models), optionalText(setting.selectedModelID), date(setting.lastHealthCheckAt), .text(setting.lastHealthStatus.rawValue)]
         )
     }
 
@@ -375,6 +375,7 @@ public actor SQLiteProviderSettingsRepository: ProviderSettingsRepository {
             transportState: TransportState(rawValue: row["transport_state"].stringValue ?? "") ?? .invalidURL,
             credentialState: CredentialState(rawValue: row["credential_state"].stringValue ?? "") ?? .noneNeeded,
             modelIDs: models,
+            selectedModelID: row["selected_model_id"].stringValue,
             lastHealthCheckAt: optionalDate(row["last_health_check_at"]),
             lastHealthStatus: ProviderHealthStatus(rawValue: row["last_health_status"].stringValue ?? "") ?? .unknown
         )
@@ -387,6 +388,112 @@ public actor SQLiteAppSettingsRepository: AppSettingsRepository {
     public func set(_ value: String, forKey key: String) async throws { try await database.execute("INSERT OR REPLACE INTO app_settings(key, value, updated_at) VALUES (?, ?, ?);", bindings: [.text(key), .text(value), date(Date())]) }
     public func value(forKey key: String) async throws -> String? { try await database.query("SELECT value FROM app_settings WHERE key = ?;", bindings: [.text(key)]).first?["value"].stringValue }
     public func removeValue(forKey key: String) async throws { try await database.execute("DELETE FROM app_settings WHERE key = ?;", bindings: [.text(key)]) }
+}
+
+public actor SQLiteOfficePreferencesRepository: OfficePreferencesRepository {
+    private let database: LocalLensDatabase
+    public init(database: LocalLensDatabase) { self.database = database }
+
+    public func load() async throws -> OfficeIndexingPreferences {
+        guard let row = try await database.query("SELECT * FROM office_preferences WHERE id = 'default';").first else { return OfficeIndexingPreferences() }
+        return OfficeIndexingPreferences(pptxEnabled: bool(row["pptx_enabled"]), docxEnabled: bool(row["docx_enabled"]), xlsxEnabled: bool(row["xlsx_enabled"]))
+    }
+
+    public func save(_ preferences: OfficeIndexingPreferences) async throws {
+        try await database.execute(
+            "INSERT OR REPLACE INTO office_preferences(id, pptx_enabled, docx_enabled, xlsx_enabled, updated_at) VALUES ('default', ?, ?, ?, ?);",
+            bindings: [.integer(preferences.pptxEnabled ? 1 : 0), .integer(preferences.docxEnabled ? 1 : 0), .integer(preferences.xlsxEnabled ? 1 : 0), date(Date())]
+        )
+    }
+}
+
+public actor SQLiteProviderModelSelectionRepository: ProviderModelSelectionRepository {
+    private let database: LocalLensDatabase
+    public init(database: LocalLensDatabase) { self.database = database }
+
+    public func save(_ state: ProviderModelSelectionState) async throws {
+        let data = try JSONEncoder().encode(state.availableModelIDs)
+        let json = String(data: data, encoding: .utf8) ?? "[]"
+        try await database.execute(
+            "INSERT OR REPLACE INTO provider_model_selections(provider_id, selected_model_id, available_model_ids_json, availability_state, last_refreshed_at, last_safe_error, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            bindings: [.text(state.providerID), optionalText(state.selectedModelID), .text(json), .text(state.availabilityState.rawValue), date(state.lastRefreshedAt), optionalText(state.lastSafeError), date(Date())]
+        )
+    }
+
+    public func get(providerID: String) async throws -> ProviderModelSelectionState? {
+        try await database.query("SELECT * FROM provider_model_selections WHERE provider_id = ?;", bindings: [.text(providerID)]).first.map(Self.decode)
+    }
+
+    public func list() async throws -> [ProviderModelSelectionState] {
+        try await database.query("SELECT * FROM provider_model_selections ORDER BY provider_id ASC;").map(Self.decode)
+    }
+
+    private static func decode(_ row: SQLiteRow) -> ProviderModelSelectionState {
+        let data = row["available_model_ids_json"].stringValue?.data(using: .utf8) ?? Data()
+        let models = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        return ProviderModelSelectionState(
+            providerID: row["provider_id"].stringValue ?? "",
+            selectedModelID: row["selected_model_id"].stringValue,
+            availableModelIDs: models,
+            availabilityState: ProviderSelectionAvailability(rawValue: row["availability_state"].stringValue ?? "") ?? .unknown,
+            lastRefreshedAt: optionalDate(row["last_refreshed_at"]),
+            lastSafeError: row["last_safe_error"].stringValue
+        )
+    }
+}
+
+public actor SQLiteHermesProfileSelectionRepository: HermesProfileSelectionRepository {
+    private let database: LocalLensDatabase
+    public init(database: LocalLensDatabase) { self.database = database }
+
+    public func load() async throws -> HermesProfileSelectionState {
+        guard let row = try await database.query("SELECT * FROM hermes_profile_selection WHERE id = 'default';").first else { return HermesProfileSelectionState() }
+        let data = row["available_profiles_json"].stringValue?.data(using: .utf8) ?? Data()
+        let profiles = (try? JSONDecoder().decode([HermesProfileSummary].self, from: data)) ?? []
+        return HermesProfileSelectionState(
+            selectedProfileID: row["selected_profile_id"].stringValue,
+            selectedProfileDisplayName: row["selected_profile_display_name"].stringValue,
+            availableProfiles: profiles,
+            availabilityState: ProviderSelectionAvailability(rawValue: row["availability_state"].stringValue ?? "") ?? .unknown,
+            lastRefreshedAt: optionalDate(row["last_refreshed_at"]),
+            lastSafeError: row["last_safe_error"].stringValue
+        )
+    }
+
+    public func save(_ state: HermesProfileSelectionState) async throws {
+        let data = try JSONEncoder().encode(state.availableProfiles)
+        let json = String(data: data, encoding: .utf8) ?? "[]"
+        try await database.execute(
+            "INSERT OR REPLACE INTO hermes_profile_selection(id, selected_profile_id, selected_profile_display_name, available_profiles_json, availability_state, last_refreshed_at, last_safe_error, updated_at) VALUES ('default', ?, ?, ?, ?, ?, ?, ?);",
+            bindings: [optionalText(state.selectedProfileID), optionalText(state.selectedProfileDisplayName), .text(json), .text(state.availabilityState.rawValue), date(state.lastRefreshedAt), optionalText(state.lastSafeError), date(Date())]
+        )
+    }
+}
+
+public actor SQLiteOfficeExtractionMetadataRepository: OfficeExtractionMetadataRepository {
+    private let database: LocalLensDatabase
+    public init(database: LocalLensDatabase) { self.database = database }
+
+    public func save(_ metadata: OfficeExtractionMetadata) async throws {
+        try await database.execute(
+            "INSERT INTO office_extraction_metadata(id, asset_id, office_kind, provider_id, hermes_profile_id, safe_summary, safe_snippet, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+            bindings: [.text(UUID().uuidString), .text(metadata.assetID.uuidString), .text(metadata.officeKind.rawValue), .text(metadata.providerID), .text(metadata.hermesProfileID), optionalText(metadata.safeSummary), optionalText(metadata.safeSnippet), date(metadata.createdAt)]
+        )
+    }
+
+    public func list(assetID: UUID) async throws -> [OfficeExtractionMetadata] {
+        try await database.query("SELECT * FROM office_extraction_metadata WHERE asset_id = ? ORDER BY created_at DESC;", bindings: [.text(assetID.uuidString)]).map { row in
+            OfficeExtractionMetadata(
+                assetID: uuid(row["asset_id"]),
+                officeKind: OfficeDocumentKind(rawValue: row["office_kind"].stringValue ?? "") ?? .docx,
+                providerID: row["provider_id"].stringValue ?? "hermes-agent",
+                hermesProfileID: row["hermes_profile_id"].stringValue ?? "default",
+                safeSummary: row["safe_summary"].stringValue,
+                safeSnippet: row["safe_snippet"].stringValue,
+                createdAt: optionalDate(row["created_at"]) ?? Date(timeIntervalSince1970: 0)
+            )
+        }
+    }
 }
 
 public actor StorageMaintenanceRepository: StorageMaintenanceRepositoryProtocol {

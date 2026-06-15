@@ -87,6 +87,18 @@ public actor LocalLensDatabase {
 
     public func migrate() throws {
         for sql in MigrationV1.statements { try execute(sql) }
+        try applyAdditiveMigrationsIfNeeded()
+    }
+
+    private func applyAdditiveMigrationsIfNeeded() throws {
+        if !(try table("provider_settings", hasColumn: "selected_model_id")) {
+            try execute("ALTER TABLE provider_settings ADD COLUMN selected_model_id TEXT;")
+        }
+    }
+
+    private func table(_ tableName: String, hasColumn columnName: String) throws -> Bool {
+        let rows = try query("PRAGMA table_info(\(tableName));")
+        return rows.contains { $0["name"].stringValue == columnName }
     }
 
     public func execute(_ sql: String) throws {
@@ -190,7 +202,11 @@ public actor LocalLensDatabase {
             case SQLITE_BLOB:
                 let bytes = sqlite3_column_blob(statement, index)
                 let count = Int(sqlite3_column_bytes(statement, index))
-                values[name] = .data(Data(bytes: bytes!, count: count))
+                if count == 0 || bytes == nil {
+                    values[name] = .data(Data())
+                } else {
+                    values[name] = .data(Data(bytes: bytes!, count: count))
+                }
             default:
                 values[name] = .null
             }

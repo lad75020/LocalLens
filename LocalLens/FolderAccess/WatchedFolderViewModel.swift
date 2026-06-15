@@ -81,7 +81,14 @@ public final class WatchedFolderViewModel: ObservableObject {
         scanningFolder.updatedAt = Date()
         try await dependencies.storage.watchedFolders.save(scanningFolder)
 
-        let result = try dependencies.mediaDiscoveryService.discover(in: rootURL, watchedFolderID: folder.id)
+        let preferences = try await dependencies.storage.officePreferences.load()
+        let hermesProfile = try await dependencies.storage.hermesProfileSelection.load()
+        let hermesProvider = try await dependencies.storage.providers.get(id: "hermes-agent")
+        let officePolicy = OfficeDiscoveryPolicy(
+            preferences: preferences,
+            hermesReadyForOfficeIndexing: (hermesProvider?.isEnabled == true) && hermesProfile.isReadyForOfficeIndexing
+        )
+        let result = try dependencies.mediaDiscoveryService.discover(in: rootURL, watchedFolderID: folder.id, officePolicy: officePolicy)
         for asset in result.assets {
             try await dependencies.storage.assets.save(asset)
         }
@@ -89,6 +96,8 @@ public final class WatchedFolderViewModel: ObservableObject {
             try await dependencies.storage.jobs.enqueue(job)
             await dependencies.indexQueue.enqueue(job)
         }
+        await dependencies.indexProgressStore.publish(await dependencies.indexQueue.snapshot())
+        dependencies.startIndexingPipeline()
 
         scanningFolder.lastScanCompletedAt = Date()
         scanningFolder.updatedAt = Date()

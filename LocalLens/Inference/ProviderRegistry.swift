@@ -13,6 +13,6 @@ public struct ProviderRegistry: Sendable {
     }
     private func setting(id: String, name: String, url: URL, enabled: Bool, automatic: Bool, locality override: ProviderLocality? = nil) -> ProviderSetting {
         let locality = override ?? policy.locality(for: url)
-        return ProviderSetting(id: id, displayName: name, baseURL: url, isEnabled: enabled, automaticIndexingEnabled: automatic, locality: locality, transportState: policy.transportState(for: url, explicitRemoteOptIn: locality == .localLoopback), credentialState: .noneNeeded, modelIDs: [], lastHealthCheckAt: nil, lastHealthStatus: .unknown)
+        return ProviderSetting(id: id, displayName: name, baseURL: url, isEnabled: enabled, automaticIndexingEnabled: automatic, locality: locality, transportState: policy.transportState(for: url, explicitRemoteOptIn: locality == .localLoopback), credentialState: .noneNeeded, modelIDs: [], selectedModelID: nil, lastHealthCheckAt: nil, lastHealthStatus: .unknown)
     }
 }

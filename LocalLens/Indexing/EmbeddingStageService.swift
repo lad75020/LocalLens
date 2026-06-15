@@ -19,13 +19,16 @@ public struct EmbeddingStageService: Sendable {
                 && setting.automaticIndexingEnabled
                 && setting.locality == .localLoopback
                 && setting.transportState == .allowedLoopbackHTTP
-                && !setting.modelIDs.isEmpty
+                && setting.effectiveModelID != nil
+                && (setting.selectedModelID == nil || setting.hasUsableSelectedModel)
         }) else {
             return EmbeddingStageResult(chunks: chunks, providerID: nil, state: .complete, failureCategory: nil)
         }
 
         do {
-            let model = provider.modelIDs[0]
+            guard let model = provider.effectiveModelID else {
+                return EmbeddingStageResult(chunks: chunks, providerID: provider.id, state: .partial, failureCategory: .modelUnavailable)
+            }
             let inputs = chunks.map { String($0.text.prefix(BuildConfiguration.maxPromptCharacters)) }
             let embeddings = try await clientFactory(provider).embeddings(model: model, inputs: inputs)
             guard embeddings.count == chunks.count else {

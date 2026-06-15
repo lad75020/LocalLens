@@ -18,7 +18,12 @@ public enum MigrationV1 {
         "CREATE INDEX IF NOT EXISTS idx_index_jobs_status_priority ON index_jobs(status, priority DESC, created_at ASC);",
         "CREATE TABLE IF NOT EXISTS index_failures (id TEXT PRIMARY KEY, asset_id TEXT, watched_folder_id TEXT, stage TEXT NOT NULL, category TEXT NOT NULL, retryability TEXT NOT NULL, safe_message TEXT NOT NULL, raw_debug_reference TEXT, created_at REAL NOT NULL, resolved_at REAL);",
         "CREATE INDEX IF NOT EXISTS idx_index_failures_unresolved ON index_failures(resolved_at, created_at);",
-        "CREATE TABLE IF NOT EXISTS provider_settings (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, base_url TEXT NOT NULL, is_enabled INTEGER NOT NULL, automatic_indexing_enabled INTEGER NOT NULL, locality TEXT NOT NULL, transport_state TEXT NOT NULL, credential_state TEXT NOT NULL, model_ids_json TEXT NOT NULL, last_health_check_at REAL, last_health_status TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS provider_settings (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, base_url TEXT NOT NULL, is_enabled INTEGER NOT NULL, automatic_indexing_enabled INTEGER NOT NULL, locality TEXT NOT NULL, transport_state TEXT NOT NULL, credential_state TEXT NOT NULL, model_ids_json TEXT NOT NULL, selected_model_id TEXT, last_health_check_at REAL, last_health_status TEXT NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS office_preferences (id TEXT PRIMARY KEY, pptx_enabled INTEGER NOT NULL, docx_enabled INTEGER NOT NULL, xlsx_enabled INTEGER NOT NULL, updated_at REAL NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS provider_model_selections (provider_id TEXT PRIMARY KEY, selected_model_id TEXT, available_model_ids_json TEXT NOT NULL, availability_state TEXT NOT NULL, last_refreshed_at REAL, last_safe_error TEXT, updated_at REAL NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS hermes_profile_selection (id TEXT PRIMARY KEY, selected_profile_id TEXT, selected_profile_display_name TEXT, available_profiles_json TEXT NOT NULL, availability_state TEXT NOT NULL, last_refreshed_at REAL, last_safe_error TEXT, updated_at REAL NOT NULL);",
+        "CREATE TABLE IF NOT EXISTS office_extraction_metadata (id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, office_kind TEXT NOT NULL, provider_id TEXT NOT NULL, hermes_profile_id TEXT NOT NULL, safe_summary TEXT, safe_snippet TEXT, created_at REAL NOT NULL);",
+        "CREATE INDEX IF NOT EXISTS idx_office_extraction_metadata_asset ON office_extraction_metadata(asset_id);",
         "CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at REAL NOT NULL);",
         "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, datetime('now'));"
     ]

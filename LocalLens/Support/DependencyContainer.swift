@@ -10,10 +10,12 @@ public final class DependencyContainer: ObservableObject {
     public let credentialStore: ProviderCredentialStore
     public let transportPolicy: ProviderTransportPolicy
     public let providerRegistry: ProviderRegistry
+    public let providerSelectionService: ProviderSelectionService
 
     public let thumbnailService: ThumbnailService
     public let imageExtractor: ImageExtractor
     public let pdfExtractor: PDFExtractor
+    public let officeDocumentExtractor: OfficeDocumentExtractor
     public let audioTranscriptExtractor: AudioTranscriptExtractor
     public let videoSceneExtractor: VideoSceneExtractor
     public let chunkBuilder: SearchableChunkBuilder
@@ -24,6 +26,7 @@ public final class DependencyContainer: ObservableObject {
     public let indexQueue: IndexQueueActor
     public let indexProgressStore: IndexProgressStore
     public let indexCoordinator: IndexCoordinator
+    public let indexingPipelineRunner: IndexingPipelineRunner
 
     public let semanticVectorStore: SemanticVectorStore
     public let snippetBuilder: SnippetBuilder
@@ -60,6 +63,10 @@ public final class DependencyContainer: ObservableObject {
         let failures = SQLiteIndexFailureRepository(database: database)
         let providers = SQLiteProviderSettingsRepository(database: database)
         let appSettings = SQLiteAppSettingsRepository(database: database)
+        let officePreferences = SQLiteOfficePreferencesRepository(database: database)
+        let providerModelSelections = SQLiteProviderModelSelectionRepository(database: database)
+        let hermesProfileSelection = SQLiteHermesProfileSelectionRepository(database: database)
+        let officeExtractionMetadata = SQLiteOfficeExtractionMetadataRepository(database: database)
         let maintenance = StorageMaintenanceRepository(database: database)
         self.storage = StorageRepositories(
             watchedFolders: watchedFolders,
@@ -70,6 +77,10 @@ public final class DependencyContainer: ObservableObject {
             failures: failures,
             providers: providers,
             appSettings: appSettings,
+            officePreferences: officePreferences,
+            providerModelSelections: providerModelSelections,
+            hermesProfileSelection: hermesProfileSelection,
+            officeExtractionMetadata: officeExtractionMetadata,
             maintenance: maintenance
         )
 
@@ -77,10 +88,12 @@ public final class DependencyContainer: ObservableObject {
         self.credentialStore = ProviderCredentialStore()
         self.transportPolicy = ProviderTransportPolicy()
         self.providerRegistry = ProviderRegistry(policy: transportPolicy)
+        self.providerSelectionService = ProviderSelectionService(credentialStore: credentialStore, transportPolicy: transportPolicy, redactionPolicy: redactionPolicy)
 
         self.thumbnailService = ThumbnailService()
         self.imageExtractor = ImageExtractor()
         self.pdfExtractor = PDFExtractor()
+        self.officeDocumentExtractor = OfficeDocumentExtractor(credentialStore: credentialStore, redactionPolicy: redactionPolicy)
         self.audioTranscriptExtractor = AudioTranscriptExtractor()
         self.videoSceneExtractor = VideoSceneExtractor()
         self.chunkBuilder = SearchableChunkBuilder()
@@ -91,6 +104,7 @@ public final class DependencyContainer: ObservableObject {
         self.indexQueue = IndexQueueActor()
         self.indexProgressStore = IndexProgressStore()
         self.indexCoordinator = IndexCoordinator()
+        self.indexingPipelineRunner = IndexingPipelineRunner()
 
         self.semanticVectorStore = SemanticVectorStore()
         self.snippetBuilder = SnippetBuilder()
@@ -123,5 +137,17 @@ public final class DependencyContainer: ObservableObject {
                 try await providers.save(setting)
             }
         }
+    }
+
+    public func startIndexingPipeline() {
+        indexingPipelineRunner.start(
+            storage: storage,
+            queue: indexQueue,
+            progressStore: indexProgressStore,
+            coordinator: indexCoordinator,
+            cachePaths: cachePaths,
+            bookmarkStore: bookmarkStore,
+            cancellation: indexCancellation
+        )
     }
 }

@@ -137,6 +137,8 @@ public actor SearchService {
         case .pdfText: 3
         case .transcript: 2.8
         case .visualLabel: 2.2
+        case .officeText: 3.1
+        case .officeSummary: 2.7
         case .semantic: 1.5
         }
     }

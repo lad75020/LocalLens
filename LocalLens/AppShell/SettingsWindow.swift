@@ -9,6 +9,12 @@ struct SettingsWindow: View {
         "settingsResumeIndexingButton",
         "settingsCancelIndexingButton",
         "settingsProvidersRefreshButton",
+        "settingsOfficePPTXToggle",
+        "settingsOfficeDOCXToggle",
+        "settingsOfficeXLSXToggle",
+        "settingsHermesProfilePicker",
+        "settingsProviderModelPicker_ollama",
+        "settingsProviderModelPicker_omlx",
         "settingsStorageRefreshButton",
         "settingsDeleteIndexButton",
         "settingsRebuildIndexButton",
@@ -205,6 +211,8 @@ struct SettingsWindow: View {
                 Spacer()
             }
 
+            officeIndexingSection
+
             VStack(spacing: 10) {
                 ForEach(model.providers) { provider in
                     VStack(alignment: .leading, spacing: 8) {
@@ -232,6 +240,8 @@ struct SettingsWindow: View {
                             .disabled(provider.locality != .localLoopback)
                             Spacer()
                         }
+                        providerSelectionControls(for: provider)
+
                         if provider.locality != .localLoopback {
                             Text("Remote AI can receive selected file content or derived text when indexing. Keep this off unless you trust the endpoint. LocalLens never enables remote AI automatically.")
                                 .font(.caption)
@@ -244,6 +254,106 @@ struct SettingsWindow: View {
                 }
             }
             .accessibilityIdentifier("settingsProvidersList")
+        }
+    }
+
+
+    private var officeIndexingSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Office document indexing", systemImage: "doc.text.magnifyingglass")
+                .font(.headline)
+            Text("Office indexing uses Hermes Agent only. Enable each type explicitly; LocalLens never routes Office content to Ollama, oMLX, or custom providers.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Toggle("PowerPoint (.pptx)", isOn: Binding(
+                    get: { model.officePreferences.pptxEnabled },
+                    set: { model.setOfficePreference(kind: .pptx, enabled: $0) }
+                ))
+                .accessibilityIdentifier("settingsOfficePPTXToggle")
+                Toggle("Word (.docx)", isOn: Binding(
+                    get: { model.officePreferences.docxEnabled },
+                    set: { model.setOfficePreference(kind: .docx, enabled: $0) }
+                ))
+                .accessibilityIdentifier("settingsOfficeDOCXToggle")
+                Toggle("Excel (.xlsx)", isOn: Binding(
+                    get: { model.officePreferences.xlsxEnabled },
+                    set: { model.setOfficePreference(kind: .xlsx, enabled: $0) }
+                ))
+                .accessibilityIdentifier("settingsOfficeXLSXToggle")
+                Spacer()
+            }
+            if !model.hermesProfileState.isReadyForOfficeIndexing {
+                Text("Hermes Agent profile selection is required before new Office jobs can start.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier("settingsOfficeHermesReadinessWarning")
+            }
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityIdentifier("settingsOfficeIndexingSection")
+    }
+
+    @ViewBuilder
+    private func providerSelectionControls(for provider: ProviderSetting) -> some View {
+        if provider.id == "ollama" || provider.id == "omlx" {
+            let state = model.providerModelStates[provider.id] ?? ProviderModelSelectionState(providerID: provider.id, selectedModelID: provider.selectedModelID, availableModelIDs: provider.modelIDs)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Selected model").font(.caption).foregroundStyle(.secondary)
+                    Picker("Selected model", selection: Binding(
+                        get: { state.selectedModelID ?? "" },
+                        set: { model.selectProviderModel(provider, modelID: $0.isEmpty ? nil : $0) }
+                    )) {
+                        Text("Choose model…").tag("")
+                        ForEach(state.availableModelIDs, id: \.self) { modelID in
+                            Text(modelID).tag(modelID)
+                        }
+                    }
+                    .frame(maxWidth: 240)
+                    .accessibilityIdentifier("settingsProviderModelPicker_\(provider.id)")
+                    Button("Refresh Models") { model.refreshProviderModels(provider) }
+                        .accessibilityIdentifier("settingsProviderModelRefresh_\(provider.id)")
+                    Spacer()
+                }
+                if state.availabilityState == .stale {
+                    Text("Selected model is stale. Choose a currently reported model before new provider-backed work starts.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("settingsProviderModelStaleWarning_\(provider.id)")
+                }
+            }
+        }
+        if provider.id == "hermes-agent" {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Hermes profile").font(.caption).foregroundStyle(.secondary)
+                    Picker("Hermes profile", selection: Binding(
+                        get: { model.hermesProfileState.selectedProfileID ?? "" },
+                        set: { model.selectHermesProfile(profileID: $0.isEmpty ? nil : $0) }
+                    )) {
+                        Text("Choose profile…").tag("")
+                        ForEach(model.hermesProfileState.availableProfiles) { profile in
+                            Text(profile.displayName).tag(profile.id)
+                        }
+                    }
+                    .frame(maxWidth: 240)
+                    .accessibilityIdentifier("settingsHermesProfilePicker")
+                    Button("Refresh Profiles") { model.refreshHermesProfiles(provider) }
+                        .accessibilityIdentifier("settingsHermesProfilesRefreshButton")
+                    Spacer()
+                }
+                Text("Office indexing uses the selected Hermes profile, including its model, provider, and skills.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if model.hermesProfileState.availabilityState == .stale || model.hermesProfileState.availabilityState == .unavailable {
+                    Text("Selected Hermes profile is unavailable or stale; Office indexing is blocked until a valid profile is selected.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("settingsHermesProfileStaleWarning")
+                }
+            }
         }
     }
 
@@ -322,6 +432,9 @@ struct SettingsWindow: View {
 private final class SettingsWindowModel: ObservableObject {
     @Published var folders: [WatchedFolder] = []
     @Published var providers: [ProviderSetting] = []
+    @Published var officePreferences = OfficeIndexingPreferences()
+    @Published var providerModelStates: [String: ProviderModelSelectionState] = [:]
+    @Published var hermesProfileState = HermesProfileSelectionState()
     @Published var failures: [IndexFailure] = []
     @Published var progress = IndexProgressSnapshot()
     @Published var imagePDFMetrics = MediaIndexingMetrics()
@@ -347,6 +460,9 @@ private final class SettingsWindowModel: ObservableObject {
                 try await dependencies.database.migrate()
                 self.folders = try await dependencies.storage.watchedFolders.list()
                 self.providers = try await self.loadProviders(from: dependencies)
+                self.officePreferences = try await dependencies.storage.officePreferences.load()
+                self.providerModelStates = Dictionary(uniqueKeysWithValues: (try await dependencies.storage.providerModelSelections.list()).map { ($0.providerID, $0) })
+                self.hermesProfileState = try await dependencies.storage.hermesProfileSelection.load()
                 self.failures = try await dependencies.storage.failures.unresolved()
                 self.progress = await dependencies.indexQueue.snapshot()
                 self.imagePDFMetrics = try await Self.loadMetrics(from: dependencies.storage.assets, mediaTypes: [.image, .pdf])
@@ -423,6 +539,27 @@ private final class SettingsWindowModel: ObservableObject {
         }
     }
 
+
+    func setOfficePreference(kind: OfficeDocumentKind, enabled: Bool) {
+        guard let dependencies else { return }
+        var updated = officePreferences
+        switch kind {
+        case .pptx: updated.pptxEnabled = enabled
+        case .docx: updated.docxEnabled = enabled
+        case .xlsx: updated.xlsxEnabled = enabled
+        }
+        officePreferences = updated
+        Task { @MainActor [weak self, dependencies, updated] in
+            guard let self else { return }
+            do {
+                try await dependencies.storage.officePreferences.save(updated)
+                self.statusMessage = "Office indexing preference updated. Rebuild the queue to apply it to existing folders."
+            } catch {
+                self.statusMessage = "Unable to update Office preference: \(error.localizedDescription)"
+            }
+        }
+    }
+
     func setProvider(_ provider: ProviderSetting, enabled: Bool) {
         var updated = provider
         updated.isEnabled = enabled
@@ -437,6 +574,84 @@ private final class SettingsWindowModel: ObservableObject {
             statusMessage = "Remote providers cannot be enabled for automatic indexing without explicit opt-in."
         }
         saveProvider(updated)
+    }
+
+
+    func selectProviderModel(_ provider: ProviderSetting, modelID: String?) {
+        guard let dependencies else { return }
+        var updatedProvider = provider
+        updatedProvider.selectedModelID = modelID
+        let state = ProviderModelSelectionState(
+            providerID: provider.id,
+            selectedModelID: modelID,
+            availableModelIDs: providerModelStates[provider.id]?.availableModelIDs ?? provider.modelIDs,
+            availabilityState: modelID == nil ? .unknown : .available,
+            lastRefreshedAt: Date(),
+            lastSafeError: nil
+        )
+        providerModelStates[provider.id] = state
+        Task { @MainActor [weak self, dependencies, updatedProvider, state] in
+            guard let self else { return }
+            do {
+                try await dependencies.storage.providers.save(updatedProvider)
+                try await dependencies.storage.providerModelSelections.save(state)
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to update selected model: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func refreshProviderModels(_ provider: ProviderSetting) {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies, provider] in
+            guard let self else { return }
+            let previous = self.providerModelStates[provider.id]
+            let state = await dependencies.providerSelectionService.refreshModelSelection(for: provider, previous: previous)
+            var updatedProvider = ProviderSelectionService.apply(state, to: provider)
+            if updatedProvider.selectedModelID == nil, state.availableModelIDs.count == 1 {
+                updatedProvider.selectedModelID = state.availableModelIDs.first
+            }
+            do {
+                try await dependencies.storage.providerModelSelections.save(state)
+                try await dependencies.storage.providers.save(updatedProvider)
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to refresh models: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func selectHermesProfile(profileID: String?) {
+        guard let dependencies else { return }
+        var updated = hermesProfileState
+        updated.selectedProfileID = profileID
+        updated.selectedProfileDisplayName = profileID.flatMap { id in updated.availableProfiles.first { $0.id == id }?.displayName }
+        updated.availabilityState = profileID == nil ? .unknown : (updated.availableProfiles.contains { $0.id == profileID } ? .available : .stale)
+        hermesProfileState = updated
+        Task { @MainActor [weak self, dependencies, updated] in
+            guard let self else { return }
+            do {
+                try await dependencies.storage.hermesProfileSelection.save(updated)
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to update Hermes profile: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func refreshHermesProfiles(_ provider: ProviderSetting) {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies, provider] in
+            guard let self else { return }
+            let refreshed = await dependencies.providerSelectionService.refreshHermesProfiles(provider: provider, previous: self.hermesProfileState)
+            do {
+                try await dependencies.storage.hermesProfileSelection.save(refreshed)
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to refresh Hermes profiles: \(error.localizedDescription)"
+            }
+        }
     }
 
     func pauseIndexing() {

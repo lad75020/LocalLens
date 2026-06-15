@@ -263,6 +263,7 @@ private struct SearchResultRow: View {
         case .pdf: "doc.richtext"
         case .audio: "waveform"
         case .video: "film"
+        case .office: "doc.text"
         }
     }
 
@@ -274,6 +275,8 @@ private struct SearchResultRow: View {
             case .pdfText: "PDF text"
             case .transcript: "Transcript"
             case .visualLabel: "Visual label"
+            case .officeText: "Office text"
+            case .officeSummary: "Office summary"
             case .semantic: "Semantic match"
             }
         }

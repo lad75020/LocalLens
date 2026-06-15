@@ -17,6 +17,7 @@ public struct SearchableChunkBuilder: Sendable {
         pdfResult: PDFExtractionResult?,
         audioResult: AudioExtractionResult? = nil,
         videoResult: VideoSceneExtractionResult? = nil,
+        officeResult: OfficeDocumentExtractionResult? = nil,
         extractionRecordIDs: [ExtractionStage: UUID] = [:]
     ) -> [SearchableChunk] {
         var output: [SearchableChunk] = []
@@ -61,6 +62,21 @@ public struct SearchableChunkBuilder: Sendable {
                     pageNumber: page.pageNumber
                 )
             }
+        }
+
+        if let officeResult {
+            output += makeChunks(
+                assetID: asset.id,
+                extractionRecordID: extractionRecordIDs[.officeDocument],
+                type: .officeText,
+                text: officeResult.searchableText
+            )
+            output += makeChunks(
+                assetID: asset.id,
+                extractionRecordID: extractionRecordIDs[.officeDocument],
+                type: .officeSummary,
+                text: [officeResult.safeSummary, officeResult.safeSnippet, officeResult.officeKind.rawValue].compactMap { $0 }.joined(separator: "\n")
+            )
         }
 
         if let audioResult {

@@ -30,7 +30,10 @@ public struct MediaTypeResolver: Sendable {
             "aac": .init(mediaType: .audio, contentTypeIdentifier: UTType(filenameExtension: "aac")?.identifier ?? "public.aac-audio"),
             "mp4": .init(mediaType: .video, contentTypeIdentifier: UTType.mpeg4Movie.identifier),
             "mov": .init(mediaType: .video, contentTypeIdentifier: UTType.quickTimeMovie.identifier),
-            "m4v": .init(mediaType: .video, contentTypeIdentifier: UTType(filenameExtension: "m4v")?.identifier ?? "com.apple.m4v-video")
+            "m4v": .init(mediaType: .video, contentTypeIdentifier: UTType(filenameExtension: "m4v")?.identifier ?? "com.apple.m4v-video"),
+            "pptx": .init(mediaType: .office, contentTypeIdentifier: UTType(filenameExtension: "pptx")?.identifier ?? "org.openxmlformats.presentationml.presentation"),
+            "docx": .init(mediaType: .office, contentTypeIdentifier: UTType(filenameExtension: "docx")?.identifier ?? "org.openxmlformats.wordprocessingml.document"),
+            "xlsx": .init(mediaType: .office, contentTypeIdentifier: UTType(filenameExtension: "xlsx")?.identifier ?? "org.openxmlformats.spreadsheetml.sheet")
         ]
     }
 
@@ -44,5 +47,9 @@ public struct MediaTypeResolver: Sendable {
 
     public func contentTypeIdentifier(for url: URL) -> String? {
         resolve(url)?.contentTypeIdentifier
+    }
+
+    public func officeKind(for url: URL) -> OfficeDocumentKind? {
+        OfficeDocumentKind(rawValue: url.pathExtension.lowercased())
     }
 }

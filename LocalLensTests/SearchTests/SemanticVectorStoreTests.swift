@@ -27,6 +27,7 @@ final class SemanticVectorStoreTests: XCTestCase {
             transportState: .requiresHTTPS,
             credentialState: .missingRequired,
             modelIDs: ["embed"],
+            selectedModelID: nil,
             lastHealthCheckAt: nil,
             lastHealthStatus: .healthy
         )

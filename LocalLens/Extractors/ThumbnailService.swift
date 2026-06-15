@@ -29,7 +29,7 @@ public struct ThumbnailService: Sendable {
                 image = try makeImageThumbnail(from: sourceURL)
             case .pdf:
                 image = try makePDFThumbnail(from: sourceURL)
-            case .audio, .video:
+            case .audio, .video, .office:
                 throw ExtractionFailure.failed(
                     category: .unsupportedMedia,
                     retryability: .ignore,

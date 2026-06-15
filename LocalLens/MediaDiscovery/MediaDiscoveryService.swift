@@ -1,5 +1,32 @@
 import Foundation
 
+public struct OfficeDiscoveryPolicy: Equatable, Sendable {
+    public var pptxEnabled: Bool
+    public var docxEnabled: Bool
+    public var xlsxEnabled: Bool
+    public var hermesReadyForOfficeIndexing: Bool
+
+    public init(pptxEnabled: Bool = false, docxEnabled: Bool = false, xlsxEnabled: Bool = false, hermesReadyForOfficeIndexing: Bool = false) {
+        self.pptxEnabled = pptxEnabled
+        self.docxEnabled = docxEnabled
+        self.xlsxEnabled = xlsxEnabled
+        self.hermesReadyForOfficeIndexing = hermesReadyForOfficeIndexing
+    }
+
+    public init(preferences: OfficeIndexingPreferences, hermesReadyForOfficeIndexing: Bool) {
+        self.init(pptxEnabled: preferences.pptxEnabled, docxEnabled: preferences.docxEnabled, xlsxEnabled: preferences.xlsxEnabled, hermesReadyForOfficeIndexing: hermesReadyForOfficeIndexing)
+    }
+
+    public func allows(_ kind: OfficeDocumentKind) -> Bool {
+        guard hermesReadyForOfficeIndexing else { return false }
+        switch kind {
+        case .pptx: return pptxEnabled
+        case .docx: return docxEnabled
+        case .xlsx: return xlsxEnabled
+        }
+    }
+}
+
 public struct MediaDiscoveryResult: Equatable, Sendable {
     public let assets: [MediaAsset]
     public let jobs: [IndexJob]
@@ -23,11 +50,11 @@ public struct MediaDiscoveryService: Sendable {
         self.identityService = identityService
     }
 
-    public func supportedFiles(in folder: URL) -> [URL] {
-        (try? discover(in: folder, watchedFolderID: UUID()).assets.map { folder.appendingPathComponent($0.pathRelativeToFolder) }) ?? []
+    public func supportedFiles(in folder: URL, officePolicy: OfficeDiscoveryPolicy = OfficeDiscoveryPolicy()) -> [URL] {
+        (try? discover(in: folder, watchedFolderID: UUID(), officePolicy: officePolicy).assets.map { folder.appendingPathComponent($0.pathRelativeToFolder) }) ?? []
     }
 
-    public func discover(in folder: URL, watchedFolderID: UUID) throws -> MediaDiscoveryResult {
+    public func discover(in folder: URL, watchedFolderID: UUID, officePolicy: OfficeDiscoveryPolicy = OfficeDiscoveryPolicy()) throws -> MediaDiscoveryResult {
         let root = folder.standardizedFileURL
         let keys: [URLResourceKey] = [
             .isRegularFileKey,
@@ -68,6 +95,12 @@ public struct MediaDiscoveryService: Sendable {
             guard let resolved = resolver.resolve(fileURL) else {
                 unsupported += 1
                 continue
+            }
+            if resolved.mediaType == .office {
+                guard let kind = resolver.officeKind(for: fileURL), officePolicy.allows(kind) else {
+                    unsupported += 1
+                    continue
+                }
             }
             do {
                 let identity = try identityService.identity(for: fileURL)

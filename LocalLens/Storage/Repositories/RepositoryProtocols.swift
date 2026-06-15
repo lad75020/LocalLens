@@ -59,6 +59,27 @@ public protocol AppSettingsRepository: Sendable {
     func removeValue(forKey key: String) async throws
 }
 
+public protocol OfficePreferencesRepository: Sendable {
+    func load() async throws -> OfficeIndexingPreferences
+    func save(_ preferences: OfficeIndexingPreferences) async throws
+}
+
+public protocol ProviderModelSelectionRepository: Sendable {
+    func save(_ state: ProviderModelSelectionState) async throws
+    func get(providerID: String) async throws -> ProviderModelSelectionState?
+    func list() async throws -> [ProviderModelSelectionState]
+}
+
+public protocol HermesProfileSelectionRepository: Sendable {
+    func load() async throws -> HermesProfileSelectionState
+    func save(_ state: HermesProfileSelectionState) async throws
+}
+
+public protocol OfficeExtractionMetadataRepository: Sendable {
+    func save(_ metadata: OfficeExtractionMetadata) async throws
+    func list(assetID: UUID) async throws -> [OfficeExtractionMetadata]
+}
+
 public protocol StorageMaintenanceRepositoryProtocol: Sendable {
     func indexedAssetCount() async throws -> Int
     func storageUsage() async throws -> StorageUsageSnapshot
@@ -76,6 +97,10 @@ public struct StorageRepositories: Sendable {
     public let failures: any IndexFailureRepository
     public let providers: any ProviderSettingsRepository
     public let appSettings: any AppSettingsRepository
+    public let officePreferences: any OfficePreferencesRepository
+    public let providerModelSelections: any ProviderModelSelectionRepository
+    public let hermesProfileSelection: any HermesProfileSelectionRepository
+    public let officeExtractionMetadata: any OfficeExtractionMetadataRepository
     public let maintenance: any StorageMaintenanceRepositoryProtocol
 
     public init(
@@ -87,6 +112,10 @@ public struct StorageRepositories: Sendable {
         failures: any IndexFailureRepository,
         providers: any ProviderSettingsRepository,
         appSettings: any AppSettingsRepository,
+        officePreferences: any OfficePreferencesRepository,
+        providerModelSelections: any ProviderModelSelectionRepository,
+        hermesProfileSelection: any HermesProfileSelectionRepository,
+        officeExtractionMetadata: any OfficeExtractionMetadataRepository,
         maintenance: any StorageMaintenanceRepositoryProtocol
     ) {
         self.watchedFolders = watchedFolders
@@ -97,6 +126,10 @@ public struct StorageRepositories: Sendable {
         self.failures = failures
         self.providers = providers
         self.appSettings = appSettings
+        self.officePreferences = officePreferences
+        self.providerModelSelections = providerModelSelections
+        self.hermesProfileSelection = hermesProfileSelection
+        self.officeExtractionMetadata = officeExtractionMetadata
         self.maintenance = maintenance
     }
 }

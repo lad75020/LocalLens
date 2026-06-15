@@ -139,6 +139,38 @@ public struct VideoSceneExtractionResult: Equatable, Sendable {
     public var sceneLabelText: String { keyframes.flatMap(\.visualLabels).map(\.label).joined(separator: "\n") }
 }
 
+public struct OfficeDocumentExtractionResult: Equatable, Sendable {
+    public let officeKind: OfficeDocumentKind
+    public let providerID: String
+    public let hermesProfileID: String
+    public let searchableText: String
+    public let safeSummary: String?
+    public let safeSnippet: String?
+    public let failureCategory: FailureCategory?
+
+    public init(officeKind: OfficeDocumentKind, providerID: String, hermesProfileID: String, searchableText: String, safeSummary: String? = nil, safeSnippet: String? = nil, failureCategory: FailureCategory? = nil) {
+        self.officeKind = officeKind
+        self.providerID = providerID
+        self.hermesProfileID = hermesProfileID
+        self.searchableText = searchableText
+        self.safeSummary = safeSummary
+        self.safeSnippet = safeSnippet
+        self.failureCategory = failureCategory
+    }
+}
+
+public struct OfficeIndexingResult: Equatable, Sendable {
+    public let assetID: UUID
+    public let officeKind: OfficeDocumentKind
+    public let state: IndexState
+    public let providerID: String
+    public let hermesProfileID: String
+    public let searchableText: String
+    public let safeSummary: String?
+    public let safeSnippet: String?
+    public let failureCategory: FailureCategory?
+}
+
 public struct EmbeddingStageResult: Equatable, Sendable {
     public let chunks: [SearchableChunk]
     public let providerID: String?

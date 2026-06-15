@@ -73,7 +73,7 @@ public actor IndexCoordinator {
                 if result.partialFailureCount > 0 || result.failureCategory != nil {
                     partialFailures.append(result.failureCategory ?? .unknownRedacted)
                 }
-            case .audio, .video:
+            case .audio, .video, .office:
                 throw ExtractionFailure.failed(category: .unsupportedMedia, retryability: .ignore, safeMessage: "Only image and PDF assets are handled by this indexing stage.")
             }
 
@@ -159,7 +159,7 @@ public actor IndexCoordinator {
                 recordIDs[.videoTranscript] = try await saveRecord(storage, assetID: asset.id, stage: .videoTranscript, status: transcriptState, summary: result.transcriptSegments.isEmpty ? "No local audio-track transcript chunks available" : "\(result.transcriptSegments.count) audio-track transcript chunks", error: result.failureCategory, timestampStart: result.transcriptSegments.first?.timestampStart, timestampEnd: result.transcriptSegments.last?.timestampEnd, confidence: result.transcriptSegments.compactMap(\.confidence).max())
                 if let failure = result.failureCategory { partialFailures.append(failure) }
 
-            case .image, .pdf:
+            case .image, .pdf, .office:
                 throw ExtractionFailure.failed(category: .unsupportedMedia, retryability: .ignore, safeMessage: "Only audio and video assets are handled by this indexing stage.")
             }
 
@@ -191,6 +191,77 @@ public actor IndexCoordinator {
             try? await storage.assets.save(asset)
             try? await storage.failures.save(IndexFailure(id: UUID(), assetID: asset.id, watchedFolderID: asset.watchedFolderID, stage: "audioVideo", category: failure.category, retryability: failure.retryability, safeMessage: failure.localizedDescription, rawDebugReference: nil, createdAt: Date(), resolvedAt: nil))
             return AudioVideoIndexResult(assetID: asset.id, state: .failed, chunkCount: 0, sampledFrameCount: 0, failureCategory: failure.category)
+        }
+    }
+
+    @discardableResult
+    public func indexOfficeDocument(
+        asset originalAsset: MediaAsset,
+        sourceURL: URL,
+        storage: StorageRepositories,
+        officeExtractor: OfficeDocumentExtractor = OfficeDocumentExtractor(),
+        chunkBuilder: SearchableChunkBuilder = SearchableChunkBuilder(),
+        providers: [ProviderSetting] = [],
+        hermesProfile: HermesProfileSelectionState,
+        cancellation: IndexCancellation = IndexCancellation()
+    ) async -> OfficeIndexingResult {
+        var asset = originalAsset
+        do {
+            try cancellation.checkCancellation()
+            guard asset.mediaType == .office else {
+                throw ExtractionFailure.failed(category: .unsupportedMedia, retryability: .ignore, safeMessage: "Only Office assets are handled by this indexing stage.")
+            }
+            guard let provider = providers.first(where: { $0.id == "hermes-agent" && $0.isEnabled }) else {
+                throw ExtractionFailure.failed(category: .modelUnavailable, retryability: .retry, safeMessage: "Hermes Agent is required for Office indexing.")
+            }
+            guard let kind = OfficeDocumentKind(rawValue: sourceURL.pathExtension.lowercased()) else {
+                throw ExtractionFailure.failed(category: .unsupportedMedia, retryability: .ignore, safeMessage: "Unsupported Office document type.")
+            }
+
+            asset.indexState = .indexing
+            asset.updatedAt = Date()
+            try await storage.assets.save(asset)
+
+            let officeResult = try await officeExtractor.extract(from: sourceURL, asset: asset, provider: provider, hermesProfile: hermesProfile)
+            let recordID = try await saveRecord(
+                storage,
+                assetID: asset.id,
+                stage: .officeDocument,
+                status: officeResult.failureCategory == nil ? .complete : .partial,
+                summary: officeResult.safeSummary ?? "Office \(kind.rawValue) metadata extracted with Hermes Agent",
+                error: officeResult.failureCategory
+            )
+            try await storage.officeExtractionMetadata.save(OfficeExtractionMetadata(
+                assetID: asset.id,
+                officeKind: kind,
+                providerID: provider.id,
+                hermesProfileID: officeResult.hermesProfileID,
+                safeSummary: officeResult.safeSummary,
+                safeSnippet: officeResult.safeSnippet
+            ))
+
+            let chunks = chunkBuilder.chunks(for: asset, imageResult: nil, pdfResult: nil, officeResult: officeResult, extractionRecordIDs: [.officeDocument: recordID])
+            for chunk in chunks { try await storage.chunks.save(chunk) }
+
+            let finalState: IndexState = officeResult.failureCategory == nil ? .complete : .partial
+            asset.indexState = finalState
+            asset.lastIndexedAt = Date()
+            asset.updatedAt = Date()
+            try await storage.assets.save(asset)
+            return OfficeIndexingResult(assetID: asset.id, officeKind: kind, state: finalState, providerID: provider.id, hermesProfileID: officeResult.hermesProfileID, searchableText: officeResult.searchableText, safeSummary: officeResult.safeSummary, safeSnippet: officeResult.safeSnippet, failureCategory: officeResult.failureCategory)
+        } catch is CancellationError {
+            asset.indexState = .cancelled
+            asset.updatedAt = Date()
+            try? await storage.assets.save(asset)
+            try? await storage.failures.save(IndexFailure(id: UUID(), assetID: asset.id, watchedFolderID: asset.watchedFolderID, stage: "officeDocument", category: .cancelled, retryability: .retry, safeMessage: "Office indexing was cancelled.", rawDebugReference: nil, createdAt: Date(), resolvedAt: nil))
+            return OfficeIndexingResult(assetID: asset.id, officeKind: OfficeDocumentKind(rawValue: sourceURL.pathExtension.lowercased()) ?? .docx, state: .cancelled, providerID: "hermes-agent", hermesProfileID: hermesProfile.selectedProfileID ?? "", searchableText: "", safeSummary: nil, safeSnippet: nil, failureCategory: .cancelled)
+        } catch {
+            let failure = ExtractionFailure.map(error, defaultCategory: .modelUnavailable)
+            asset.indexState = .failed
+            asset.updatedAt = Date()
+            try? await storage.assets.save(asset)
+            try? await storage.failures.save(IndexFailure(id: UUID(), assetID: asset.id, watchedFolderID: asset.watchedFolderID, stage: "officeDocument", category: failure.category, retryability: failure.retryability, safeMessage: failure.localizedDescription, rawDebugReference: nil, createdAt: Date(), resolvedAt: nil))
+            return OfficeIndexingResult(assetID: asset.id, officeKind: OfficeDocumentKind(rawValue: sourceURL.pathExtension.lowercased()) ?? .docx, state: .failed, providerID: "hermes-agent", hermesProfileID: hermesProfile.selectedProfileID ?? "", searchableText: "", safeSummary: nil, safeSnippet: nil, failureCategory: failure.category)
         }
     }
 

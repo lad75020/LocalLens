@@ -60,6 +60,7 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
             transportState: .allowedLoopbackHTTP,
             credentialState: .noneNeeded,
             modelIDs: ["embedding-test"],
+            selectedModelID: nil,
             lastHealthCheckAt: nil,
             lastHealthStatus: .healthy
         )
@@ -119,6 +120,10 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
             failures: SQLiteIndexFailureRepository(database: database),
             providers: SQLiteProviderSettingsRepository(database: database),
             appSettings: SQLiteAppSettingsRepository(database: database),
+            officePreferences: SQLiteOfficePreferencesRepository(database: database),
+            providerModelSelections: SQLiteProviderModelSelectionRepository(database: database),
+            hermesProfileSelection: SQLiteHermesProfileSelectionRepository(database: database),
+            officeExtractionMetadata: SQLiteOfficeExtractionMetadataRepository(database: database),
             maintenance: StorageMaintenanceRepository(database: database)
         )
     }
