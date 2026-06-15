@@ -128,10 +128,27 @@ public struct SearchRequest: Equatable, Sendable {
     public var watchedFolderIDs: Set<UUID>
     public var limit: Int
     public var includeMissing: Bool
+
     public init(query: String, mediaTypes: Set<MediaType> = [], watchedFolderIDs: Set<UUID> = [], limit: Int = 25, includeMissing: Bool = false) {
-        self.query = query; self.mediaTypes = mediaTypes; self.watchedFolderIDs = watchedFolderIDs; self.limit = max(1, min(limit, BuildConfiguration.maxSearchResults)); self.includeMissing = includeMissing
+        self.query = query
+        self.mediaTypes = mediaTypes
+        self.watchedFolderIDs = watchedFolderIDs
+        self.limit = max(1, min(limit, BuildConfiguration.maxSearchResults))
+        self.includeMissing = includeMissing
     }
-    public var boundedProviderQuery: String { String(query.prefix(BuildConfiguration.maxProviderQueryCharacters)) }
+
+    public var normalizedQuery: String {
+        query
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    public var isEmpty: Bool { normalizedQuery.isEmpty }
+    public var boundedProviderQuery: String { String(normalizedQuery.prefix(BuildConfiguration.maxProviderQueryCharacters)) }
+    public var diagnosticsSummary: String { "SearchRequest(query: [REDACTED], mediaTypes: \(mediaTypes.count), watchedFolders: \(watchedFolderIDs.count), limit: \(limit), includeMissing: \(includeMissing))" }
 }
 
 public struct SearchResultDTO: Identifiable, Sendable, Equatable {
@@ -148,4 +165,20 @@ public struct SearchResultDTO: Identifiable, Sendable, Equatable {
     public let timestampStart: Double?
     public let timestampEnd: Double?
     public let isMissing: Bool
+
+    public init(id: UUID = UUID(), assetID: UUID, filename: String, mediaType: MediaType, folderContext: String, thumbnailID: UUID?, score: Double, matchReasons: [MatchReason], snippet: String?, pageNumber: Int?, timestampStart: Double?, timestampEnd: Double?, isMissing: Bool) {
+        self.id = id
+        self.assetID = assetID
+        self.filename = filename
+        self.mediaType = mediaType
+        self.folderContext = folderContext
+        self.thumbnailID = thumbnailID
+        self.score = score
+        self.matchReasons = matchReasons
+        self.snippet = snippet
+        self.pageNumber = pageNumber
+        self.timestampStart = timestampStart
+        self.timestampEnd = timestampEnd
+        self.isMissing = isMissing
+    }
 }

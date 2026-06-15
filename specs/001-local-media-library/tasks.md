@@ -130,21 +130,21 @@
 
 ### Tests for User Story 3 (Mandatory)
 
-- [ ] T057 [P] [US3] Create XCTest for SearchRequest validation, empty queries, query length bounds, and sensitive query diagnostic exclusion in `LocalLensTests/SearchTests/SearchRequestTests.swift`
-- [ ] T058 [P] [US3] Create XCTest for FTS search across filenames, OCR text, PDF text, transcript text, and visual labels in `LocalLensTests/SearchTests/FTSSearchTests.swift`
-- [ ] T059 [P] [US3] Create XCTest for semantic vector candidate scoring, no-provider fallback, and dimension mismatch handling in `LocalLensTests/SearchTests/SemanticVectorStoreTests.swift`
-- [ ] T060 [P] [US3] Create XCTest for deterministic ranking, match reasons, snippets, page hints, timestamp hints, and missing-file exclusion in `LocalLensTests/SearchTests/SearchRankerTests.swift`
-- [ ] T061 [P] [US3] Create UI test for menu bar search, keyboard navigation, empty state, and visible match reasons in `LocalLensUITests/SearchPopoverUITests.swift`
+- [X] T057 [P] [US3] Create XCTest for SearchRequest validation, empty queries, query length bounds, and sensitive query diagnostic exclusion in `LocalLensTests/SearchTests/SearchRequestTests.swift`
+- [X] T058 [P] [US3] Create XCTest for FTS search across filenames, OCR text, PDF text, transcript text, and visual labels in `LocalLensTests/SearchTests/FTSSearchTests.swift`
+- [X] T059 [P] [US3] Create XCTest for semantic vector candidate scoring, no-provider fallback, and dimension mismatch handling in `LocalLensTests/SearchTests/SemanticVectorStoreTests.swift`
+- [X] T060 [P] [US3] Create XCTest for deterministic ranking, match reasons, snippets, page hints, timestamp hints, and missing-file exclusion in `LocalLensTests/SearchTests/SearchRankerTests.swift`
+- [X] T061 [P] [US3] Create UI test for menu bar search, keyboard navigation, empty state, and visible match reasons in `LocalLensUITests/SearchPopoverUITests.swift`
 
 ### Implementation for User Story 3
 
-- [ ] T062 [P] [US3] Implement semantic vector storage, cosine scoring, model-dimension checks, and local-only query embedding calls in `LocalLens/Search/SemanticVectorStore.swift`
-- [ ] T063 [P] [US3] Implement snippet generation with bounded context and no unrelated extracted content exposure in `LocalLens/Search/SnippetBuilder.swift`
-- [ ] T064 [US3] Implement SearchRanker with lexical score, semantic score, exact phrase boosts, media relevance, page/timestamp context, and missing/stale penalties in `LocalLens/Search/SearchRanker.swift`
-- [ ] T065 [US3] Implement SearchService with debounced cancellable query execution, lexical-first results, semantic refinement, and result DTO mapping in `LocalLens/Search/SearchService.swift`
-- [ ] T066 [US3] Implement SearchResultViewModel for query state, results, selection, empty states, match reasons, and keyboard commands in `LocalLens/Search/SearchResultViewModel.swift`
-- [ ] T067 [US3] Implement Liquid Glass search popover with search field, result rows, thumbnails, match reasons, snippets, page/timestamp hints, and empty state in `LocalLens/AppShell/SearchPopoverView.swift`
-- [ ] T068 [US3] Wire menu bar search presentation, shortcut focus, Escape dismissal, and indexing status summary in `LocalLens/AppShell/MenuBarRootView.swift`
+- [X] T062 [P] [US3] Implement semantic vector storage, cosine scoring, model-dimension checks, and local-only query embedding calls in `LocalLens/Search/SemanticVectorStore.swift`
+- [X] T063 [P] [US3] Implement snippet generation with bounded context and no unrelated extracted content exposure in `LocalLens/Search/SnippetBuilder.swift`
+- [X] T064 [US3] Implement SearchRanker with lexical score, semantic score, exact phrase boosts, media relevance, page/timestamp context, and missing/stale penalties in `LocalLens/Search/SearchRanker.swift`
+- [X] T065 [US3] Implement SearchService with debounced cancellable query execution, lexical-first results, semantic refinement, and result DTO mapping in `LocalLens/Search/SearchService.swift`
+- [X] T066 [US3] Implement SearchResultViewModel for query state, results, selection, empty states, match reasons, and keyboard commands in `LocalLens/Search/SearchResultViewModel.swift`
+- [X] T067 [US3] Implement Liquid Glass search popover with search field, result rows, thumbnails, match reasons, snippets, page/timestamp hints, and empty state in `LocalLens/AppShell/SearchPopoverView.swift`
+- [X] T068 [US3] Wire menu bar search presentation, shortcut focus, Escape dismissal, and indexing status summary in `LocalLens/AppShell/MenuBarRootView.swift`
 
 **Checkpoint**: User Story 3 completes the core searchable private media library MVP for folders plus image/PDF indexing plus search.
 
