@@ -1,0 +1,30 @@
+# Spec Kit generated internals (tracked files still remain tracked)
+/.specify
+/.specify/memory
+
+# macOS / Xcode
+.DS_Store
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.swiftpm/
+.build/
+Packages/
+
+# Build outputs and logs
+build/
+dist/
+*.log
+*.tmp
+*.swp
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/

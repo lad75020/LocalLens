@@ -18,17 +18,17 @@
   the iteration process.
 -->
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
+**Language/Version**: Swift 6+ or NEEDS CLARIFICATION
 
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+**Primary Dependencies**: SwiftUI, AppKit bridges as needed, Vision, AVFoundation, PDFKit, local AI/inference libraries, persistence layer, or NEEDS CLARIFICATION
 
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+**Storage**: Local Application Support database/files, security-scoped bookmarks, model/index storage, or NEEDS CLARIFICATION
 
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
+**Testing**: XCTest plus focused fixture/manual QA for file access, inference, indexing, and privacy behavior
 
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Target Platform**: macOS 26.0+ menu bar app unless feature explicitly broadens support
 
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
+**Project Type**: native macOS SwiftUI/AppKit desktop/menu bar app
 
 **Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
 
@@ -40,7 +40,14 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **File-system authority**: PASS only if the plan states which roots/files are read or changed, how broad filesystem access is justified, how denied/moved/external paths behave, and whether operations are non-destructive.
+- **Local-first AI**: PASS only if local inference remains the default and any remote provider is opt-in, labeled, transport-guarded, and covered by privacy copy.
+- **Non-destructive media handling**: PASS only if indexing/search do not mutate source files, or any mutation includes confirmation, recovery, and dedicated tests.
+- **Responsive architecture**: PASS only if recursive scanning, IO, decoding, OCR, transcription, embeddings, video sampling, and database work run in cancellable background services/actors outside the MainActor.
+- **Testable Swift design**: PASS only if services are dependency-injected and XCTest coverage is planned for file access, indexing queues, extractors, search ranking, cancellation, and guardrails.
+- **Privacy/secrets/transport**: PASS only if credentials use Keychain, remote TLS/self-signed behavior is specified, diagnostics are redacted, and local index retention/deletion is documented.
+- **Observability/recovery**: PASS only if progress, failure categories, retry/ignore/reauthorize/rebuild actions, and safe diagnostic export are specified.
+- **Performance bounds**: PASS only if concurrency, memory, thumbnail size, video sampling, chunking, and index rebuild bounds are documented.
 
 ## Project Structure
 
@@ -65,39 +72,27 @@ specs/[###-feature]/
 -->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+LocalLens/
+├── AppShell/              # MenuBarExtra, settings, onboarding, app lifecycle
+├── FolderAccess/          # NSOpenPanel and security-scoped bookmark services
+├── MediaDiscovery/        # UTType detection, recursive scanning, file identity
+├── Indexing/              # Queue actors, orchestration, cancellation, progress
+├── Extractors/            # OCR, PDF, audio, video, thumbnail, scene services
+├── Embeddings/            # Local embedding providers and chunking
+├── Search/                # Lexical/semantic search, ranking, snippets
+├── PreviewActions/        # Quick Look, Finder reveal, open/copy actions
+├── Storage/               # Database, migrations, thumbnail/index storage
+├── Diagnostics/           # Redacted logs, failure reports, privacy checks
+└── Resources/
 
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+LocalLensTests/
+├── FolderAccessTests/
+├── MediaDiscoveryTests/
+├── IndexingTests/
+├── ExtractorTests/
+├── SearchTests/
+├── PrivacySecurityTests/
+└── Fixtures/
 ```
 
 **Structure Decision**: [Document the selected structure and reference the real
