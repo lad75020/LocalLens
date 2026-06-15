@@ -30,6 +30,12 @@ public final class DependencyContainer: ObservableObject {
     public let searchRanker: SearchRanker
     public let searchService: SearchService
     public let searchResultViewModel: SearchResultViewModel
+
+    public let bookmarkStore: SecurityScopedBookmarkStore
+    public let folderAuthorizationService: FolderAuthorizationService
+    public let mediaTypeResolver: MediaTypeResolver
+    public let fileIdentityService: FileIdentityService
+    public let mediaDiscoveryService: MediaDiscoveryService
     public let watchedFolderViewModel: WatchedFolderViewModel
 
     public let quickLookPreviewService: QuickLookPreviewService
@@ -90,6 +96,12 @@ public final class DependencyContainer: ObservableObject {
         self.searchRanker = SearchRanker()
         self.searchService = SearchService()
         self.searchResultViewModel = SearchResultViewModel()
+
+        self.bookmarkStore = SecurityScopedBookmarkStore()
+        self.folderAuthorizationService = FolderAuthorizationService(bookmarkStore: bookmarkStore)
+        self.mediaTypeResolver = MediaTypeResolver()
+        self.fileIdentityService = FileIdentityService()
+        self.mediaDiscoveryService = MediaDiscoveryService(resolver: mediaTypeResolver, identityService: fileIdentityService)
         self.watchedFolderViewModel = WatchedFolderViewModel()
 
         self.quickLookPreviewService = QuickLookPreviewService()

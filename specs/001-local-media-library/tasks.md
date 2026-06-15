@@ -73,22 +73,22 @@
 
 ### Tests for User Story 1 (Mandatory)
 
-- [ ] T032 [P] [US1] Create XCTest for security-scoped bookmark save, restore, stale bookmark, denied access, and balanced start/stop behavior in `LocalLensTests/FolderAccessTests/SecurityScopedBookmarkStoreTests.swift`
-- [ ] T033 [P] [US1] Create XCTest for watched folder add, enable, disable, remove, relaunch restoration, and index cleanup without source deletion in `LocalLensTests/FolderAccessTests/WatchedFolderRepositoryTests.swift`
-- [ ] T034 [P] [US1] Create XCTest for recursive discovery of supported media types and ignored unsupported files in `LocalLensTests/MediaDiscoveryTests/MediaDiscoveryServiceTests.swift`
-- [ ] T035 [P] [US1] Create UI test for first folder onboarding, add-folder panel flow, Settings folder list, and removal confirmation in `LocalLensUITests/OnboardingUITests.swift`
+- [X] T032 [P] [US1] Create XCTest for security-scoped bookmark save, restore, stale bookmark, denied access, and balanced start/stop behavior in `LocalLensTests/FolderAccessTests/SecurityScopedBookmarkStoreTests.swift`
+- [X] T033 [P] [US1] Create XCTest for watched folder add, enable, disable, remove, relaunch restoration, and index cleanup without source deletion in `LocalLensTests/FolderAccessTests/WatchedFolderRepositoryTests.swift`
+- [X] T034 [P] [US1] Create XCTest for recursive discovery of supported media types and ignored unsupported files in `LocalLensTests/MediaDiscoveryTests/MediaDiscoveryServiceTests.swift`
+- [X] T035 [P] [US1] Create UI test for first folder onboarding, add-folder panel flow, Settings folder list, and removal confirmation in `LocalLensUITests/OnboardingUITests.swift`
 
 ### Implementation for User Story 1
 
-- [ ] T036 [P] [US1] Implement security-scoped bookmark persistence and access tokens in `LocalLens/FolderAccess/SecurityScopedBookmarkStore.swift`
-- [ ] T037 [US1] Implement NSOpenPanel folder authorization, reauthorization, stale access handling, and removal semantics in `LocalLens/FolderAccess/FolderAuthorizationService.swift`
-- [ ] T038 [P] [US1] Implement UTType resolution for PNG, JPEG, HEIC, TIFF, WebP, PDF, MP3, M4A, WAV, AAC, MP4, MOV, and M4V in `LocalLens/MediaDiscovery/MediaTypeResolver.swift`
-- [ ] T039 [P] [US1] Implement file identity and file signature capture for supported media in `LocalLens/MediaDiscovery/FileIdentityService.swift`
-- [ ] T040 [US1] Implement recursive media discovery with hidden/package/symlink/permission handling and discovery job creation in `LocalLens/MediaDiscovery/MediaDiscoveryService.swift`
-- [ ] T041 [US1] Implement watched folder state view model with add, enable, disable, remove, reauthorize, and queue-discovery actions in `LocalLens/FolderAccess/WatchedFolderViewModel.swift`
-- [ ] T042 [US1] Implement first-run onboarding view with privacy promise, folder access explanation, and add-folder call to action in `LocalLens/AppShell/OnboardingView.swift`
-- [ ] T043 [US1] Implement Settings folder management section with authorization state, last scan time, enable toggle, remove action, and reauthorize action in `LocalLens/AppShell/SettingsWindow.swift`
-- [ ] T044 [US1] Wire menu bar app lifecycle to show onboarding when no watched folders exist and queue discovery after folder addition in `LocalLens/AppShell/MenuBarRootView.swift`
+- [X] T036 [P] [US1] Implement security-scoped bookmark persistence and access tokens in `LocalLens/FolderAccess/SecurityScopedBookmarkStore.swift`
+- [X] T037 [US1] Implement NSOpenPanel folder authorization, reauthorization, stale access handling, and removal semantics in `LocalLens/FolderAccess/FolderAuthorizationService.swift`
+- [X] T038 [P] [US1] Implement UTType resolution for PNG, JPEG, HEIC, TIFF, WebP, PDF, MP3, M4A, WAV, AAC, MP4, MOV, and M4V in `LocalLens/MediaDiscovery/MediaTypeResolver.swift`
+- [X] T039 [P] [US1] Implement file identity and file signature capture for supported media in `LocalLens/MediaDiscovery/FileIdentityService.swift`
+- [X] T040 [US1] Implement recursive media discovery with hidden/package/symlink/permission handling and discovery job creation in `LocalLens/MediaDiscovery/MediaDiscoveryService.swift`
+- [X] T041 [US1] Implement watched folder state view model with add, enable, disable, remove, reauthorize, and queue-discovery actions in `LocalLens/FolderAccess/WatchedFolderViewModel.swift`
+- [X] T042 [US1] Implement first-run onboarding view with privacy promise, folder access explanation, and add-folder call to action in `LocalLens/AppShell/OnboardingView.swift`
+- [X] T043 [US1] Implement Settings folder management section with authorization state, last scan time, enable toggle, remove action, and reauthorize action in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T044 [US1] Wire menu bar app lifecycle to show onboarding when no watched folders exist and queue discovery after folder addition in `LocalLens/AppShell/MenuBarRootView.swift`
 
 **Checkpoint**: User Story 1 is independently usable and tested.
 

@@ -18,6 +18,7 @@ struct SettingsWindow: View {
 
     @EnvironmentObject private var dependencies: DependencyContainer
     @StateObject private var model = SettingsWindowModel()
+    @State private var folderPendingRemoval: WatchedFolder?
 
     var body: some View {
         TabView {
@@ -43,6 +44,25 @@ struct SettingsWindow: View {
         }
         .padding(20)
         .frame(minWidth: 720, minHeight: 520)
+        .confirmationDialog(
+            "Remove watched folder?",
+            isPresented: Binding(
+                get: { folderPendingRemoval != nil },
+                set: { isPresented in
+                    if !isPresented { folderPendingRemoval = nil }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: folderPendingRemoval
+        ) { folder in
+            Button("Remove Folder", role: .destructive) {
+                model.removeFolder(folder)
+                folderPendingRemoval = nil
+            }
+            Button("Cancel", role: .cancel) { folderPendingRemoval = nil }
+        } message: { folder in
+            Text("LocalLens removes derived index records for \(folder.displayName) without touching source media files.")
+        }
         .task { model.configure(dependencies: dependencies) }
     }
 
@@ -51,7 +71,7 @@ struct SettingsWindow: View {
             HStack {
                 Button("Refresh") { model.refresh() }
                     .accessibilityIdentifier("settingsFoldersRefreshButton")
-                Button("Add Folder…") { model.noteUnavailable("Folder authorization is not wired yet. Use the upcoming folder onboarding flow to add folders.") }
+                Button("Add Folder…") { model.addFolder() }
                     .accessibilityIdentifier("settingsAddFolderButton")
                 Spacer()
             }
@@ -72,6 +92,15 @@ struct SettingsWindow: View {
                                 Text("Authorization: \(folder.authorizationState.rawValue)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                if let lastScan = folder.lastScanCompletedAt ?? folder.lastScanStartedAt {
+                                    Text("Last scan: \(lastScan.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text("Last scan: Not yet scanned")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             Toggle("Enabled", isOn: Binding(
@@ -79,8 +108,9 @@ struct SettingsWindow: View {
                                 set: { model.setFolder(folder, enabled: $0) }
                             ))
                             .toggleStyle(.switch)
-                            Button("Reauthorize") { model.noteUnavailable("Reauthorization will be enabled with the folder authorization service.") }
-                            Button("Remove", role: .destructive) { model.removeFolder(folder) }
+                            Button("Reauthorize") { model.reauthorizeFolder(folder) }
+                            Button("Remove", role: .destructive) { folderPendingRemoval = folder }
+                                .accessibilityIdentifier("settingsRemoveFolderButton")
                         }
                         .padding(10)
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -277,6 +307,21 @@ private final class SettingsWindowModel: ObservableObject {
         }
     }
 
+    func addFolder() {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies] in
+            guard let self else { return }
+            do {
+                guard let selection = try await dependencies.folderAuthorizationService.requestFolderAuthorization() else { return }
+                try await dependencies.storage.watchedFolders.save(selection.folder)
+                try await dependencies.watchedFolderViewModel.queueDiscovery(for: selection.folder, rootURL: selection.url, dependencies: dependencies)
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to add folder: \(error.localizedDescription)"
+            }
+        }
+    }
+
     func setFolder(_ folder: WatchedFolder, enabled: Bool) {
         guard let dependencies else { return }
         Task { @MainActor [weak self, dependencies] in
@@ -298,10 +343,25 @@ private final class SettingsWindowModel: ObservableObject {
         Task { @MainActor [weak self, dependencies] in
             guard let self else { return }
             do {
-                try await dependencies.storage.watchedFolders.remove(id: folder.id)
+                try await dependencies.folderAuthorizationService.remove(folder: folder, storage: dependencies.storage)
                 self.refresh()
             } catch {
                 self.statusMessage = "Unable to remove folder: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func reauthorizeFolder(_ folder: WatchedFolder) {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies] in
+            guard let self else { return }
+            do {
+                guard let selection = try await dependencies.folderAuthorizationService.reauthorize(folder) else { return }
+                try await dependencies.storage.watchedFolders.save(selection.folder)
+                try await dependencies.watchedFolderViewModel.queueDiscovery(for: selection.folder, rootURL: selection.url, dependencies: dependencies)
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to reauthorize folder: \(error.localizedDescription)"
             }
         }
     }

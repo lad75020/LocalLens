@@ -33,6 +33,9 @@ public actor SQLiteWatchedFolderRepository: WatchedFolderRepository {
     }
 
     public func remove(id: UUID) async throws {
+        try await database.execute("DELETE FROM media_assets WHERE watched_folder_id = ?;", bindings: [.text(id.uuidString)])
+        try await database.execute("DELETE FROM index_jobs WHERE watched_folder_id = ?;", bindings: [.text(id.uuidString)])
+        try await database.execute("DELETE FROM index_failures WHERE watched_folder_id = ?;", bindings: [.text(id.uuidString)])
         try await database.execute("DELETE FROM watched_folders WHERE id = ?;", bindings: [.text(id.uuidString)])
     }
 

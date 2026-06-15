@@ -3,10 +3,28 @@ import SwiftUI
 @main
 struct LocalLensApp: App {
     @StateObject private var dependencies: DependencyContainer
-    init() { _dependencies = StateObject(wrappedValue: (try? DependencyContainer()) ?? fallbackContainer()) }
+
+    init() {
+        if CommandLine.arguments.contains("--ui-testing-fresh-state") {
+            Self.resetUITestingState()
+        }
+        let container = (try? DependencyContainer()) ?? fallbackContainer()
+        _dependencies = StateObject(wrappedValue: container)
+        UITestingWindowPresenter.showIfRequested(dependencies: container)
+    }
+
     var body: some Scene {
-        MenuBarExtra("LocalLens", systemImage: "magnifyingglass.circle") { MenuBarRootView().environmentObject(dependencies) }.menuBarExtraStyle(.window)
-        Settings { SettingsWindow().environmentObject(dependencies) }
+        MenuBarExtra("LocalLens", systemImage: "magnifyingglass.circle") {
+            MenuBarRootView()
+                .environmentObject(dependencies)
+        }
+        .menuBarExtraStyle(.window)
+    }
+
+    private static func resetUITestingState() {
+        if let support = try? LocalLensDatabase.defaultApplicationSupportURL() {
+            try? FileManager.default.removeItem(at: support)
+        }
     }
 }
 

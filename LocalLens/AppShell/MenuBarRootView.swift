@@ -2,9 +2,25 @@ import SwiftUI
 
 struct MenuBarRootView: View {
     @EnvironmentObject private var dependencies: DependencyContainer
+    @StateObject private var folderModel = WatchedFolderViewModel()
     @State private var query = ""
 
     var body: some View {
+        Group {
+            if folderModel.folders.isEmpty {
+                OnboardingView(
+                    statusMessage: folderModel.statusMessage,
+                    onAddFolder: { addFolder() },
+                    onOpenSettings: { dependencies.settingsWindowPresenter.show(dependencies: dependencies) }
+                )
+            } else {
+                searchPopover
+            }
+        }
+        .task { folderModel.configure(dependencies: dependencies) }
+    }
+
+    private var searchPopover: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("LocalLens").font(.headline)
             TextField("Search private media", text: $query)
@@ -14,7 +30,7 @@ struct MenuBarRootView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack {
-                Text("Index idle")
+                Text("\(folderModel.folders.count) folder\(folderModel.folders.count == 1 ? "" : "s") watched")
                     .font(.caption)
                     .padding(6)
                     .background(.thinMaterial, in: Capsule())
@@ -27,5 +43,15 @@ struct MenuBarRootView: View {
         }
         .padding()
         .frame(width: 420)
+    }
+
+    private func addFolder() {
+        Task { @MainActor in
+            do {
+                _ = try await folderModel.addFolderFromPanel()
+            } catch {
+                folderModel.statusMessage = "Unable to add folder: \(error.localizedDescription)"
+            }
+        }
     }
 }
