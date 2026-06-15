@@ -206,17 +206,17 @@
 
 ### Tests for User Story 6 (Mandatory)
 
-- [ ] T085 [P] [US6] Create XCTest for IndexProgressStore snapshots, queue counts, last indexed time, and redacted current labels in `LocalLensTests/IndexingTests/IndexProgressStoreTests.swift`
-- [ ] T086 [P] [US6] Create XCTest for retry failed job, reindex asset, reindex folder, ignore failure, and no partial-complete records after cancel in `LocalLensTests/IndexingTests/IndexControlActionsTests.swift`
-- [ ] T087 [P] [US6] Create UI test for progress display, pause, resume, cancel, retry, and reindex controls in `LocalLensUITests/SettingsUITests.swift`
+- [X] T085 [P] [US6] Create XCTest for IndexProgressStore snapshots, queue counts, last indexed time, and redacted current labels in `LocalLensTests/IndexingTests/IndexProgressStoreTests.swift`
+- [X] T086 [P] [US6] Create XCTest for retry failed job, reindex asset, reindex folder, ignore failure, and no partial-complete records after cancel in `LocalLensTests/IndexingTests/IndexControlActionsTests.swift`
+- [X] T087 [P] [US6] Create UI test for progress display, pause, resume, cancel, retry, and reindex controls in `LocalLensUITests/SettingsUITests.swift`
 
 ### Implementation for User Story 6
 
-- [ ] T088 [P] [US6] Implement progress snapshot persistence and AsyncStream progress publishing in `LocalLens/Indexing/IndexProgressStore.swift`
-- [ ] T089 [US6] Extend IndexCoordinator with pause, resume, cancel, retry failure, reindex asset, reindex folder, and cleanup-missing orchestration in `LocalLens/Indexing/IndexCoordinator.swift`
-- [ ] T090 [US6] Implement failure dashboard model for safe categories, retryability, and recovery actions in `LocalLens/Diagnostics/FailureDashboardView.swift`
-- [ ] T091 [US6] Add indexing status pill, progress counts, pause/resume/cancel actions, and failure count summary to `LocalLens/AppShell/MenuBarRootView.swift`
-- [ ] T092 [US6] Add Settings indexing controls for queue state, retry, ignore, reindex file, reindex folder, and rebuild queue actions in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T088 [P] [US6] Implement progress snapshot persistence and AsyncStream progress publishing in `LocalLens/Indexing/IndexProgressStore.swift`
+- [X] T089 [US6] Extend IndexCoordinator with pause, resume, cancel, retry failure, reindex asset, reindex folder, and cleanup-missing orchestration in `LocalLens/Indexing/IndexCoordinator.swift`
+- [X] T090 [US6] Implement failure dashboard model for safe categories, retryability, and recovery actions in `LocalLens/Diagnostics/FailureDashboardView.swift`
+- [X] T091 [US6] Add indexing status pill, progress counts, pause/resume/cancel actions, and failure count summary to `LocalLens/AppShell/MenuBarRootView.swift`
+- [X] T092 [US6] Add Settings indexing controls for queue state, retry, ignore, reindex file, reindex folder, and rebuild queue actions in `LocalLens/AppShell/SettingsWindow.swift`
 
 **Checkpoint**: User Story 6 makes long-running indexing observable and controllable.
 
@@ -230,19 +230,19 @@
 
 ### Tests for User Story 7 (Mandatory)
 
-- [ ] T093 [P] [US7] Create XCTest for diagnostic export redaction of paths, prompts, transcripts, extracted text, credentials, thumbnails, and raw provider bodies in `LocalLensTests/PrivacySecurityTests/DiagnosticExporterTests.swift`
-- [ ] T094 [P] [US7] Create XCTest for storage usage calculation, index deletion, index rebuild queueing, and source byte preservation in `LocalLensTests/PrivacySecurityTests/StorageManagementTests.swift`
-- [ ] T095 [P] [US7] Create XCTest for default provider settings, Hermes Agent automatic-indexing disabled state, remote provider opt-in warning, and non-loopback transmission guardrails in `LocalLensTests/PrivacySecurityTests/ProviderPrivacyDefaultsTests.swift`
-- [ ] T096 [P] [US7] Create UI test for onboarding privacy copy, AI provider settings, privacy/storage controls, diagnostic export, and failure dashboard recovery actions in `LocalLensUITests/SettingsUITests.swift`
+- [X] T093 [P] [US7] Create XCTest for diagnostic export redaction of paths, prompts, transcripts, extracted text, credentials, thumbnails, and raw provider bodies in `LocalLensTests/PrivacySecurityTests/DiagnosticExporterTests.swift`
+- [X] T094 [P] [US7] Create XCTest for storage usage calculation, index deletion, index rebuild queueing, and source byte preservation in `LocalLensTests/PrivacySecurityTests/StorageManagementTests.swift`
+- [X] T095 [P] [US7] Create XCTest for default provider settings, Hermes Agent automatic-indexing disabled state, remote provider opt-in warning, and non-loopback transmission guardrails in `LocalLensTests/PrivacySecurityTests/ProviderPrivacyDefaultsTests.swift`
+- [X] T096 [P] [US7] Create UI test for onboarding privacy copy, AI provider settings, privacy/storage controls, diagnostic export, and failure dashboard recovery actions in `LocalLensUITests/SettingsUITests.swift`
 
 ### Implementation for User Story 7
 
-- [ ] T097 [P] [US7] Implement diagnostic exporter with safe counts, provider health summaries, hashed paths, omitted transcripts, omitted extracted text, omitted credentials, and omitted raw provider bodies in `LocalLens/Diagnostics/DiagnosticExporter.swift`
-- [ ] T098 [P] [US7] Implement privacy audit service for remote transmission checks, source mutation checks, provider default checks, and diagnostic redaction checks in `LocalLens/Diagnostics/PrivacyAudit.swift`
-- [ ] T099 [US7] Implement storage usage, delete index, rebuild index, and cache cleanup actions in `LocalLens/Storage/Repositories/StorageMaintenanceRepository.swift`
-- [ ] T100 [US7] Add Privacy & Storage Settings section with local index path, size, delete, rebuild, and privacy explanation in `LocalLens/AppShell/SettingsWindow.swift`
-- [ ] T101 [US7] Add AI Providers Settings section with oMLX, Ollama, Hermes Agent, custom remote, health checks, transport warnings, Keychain credential state, and explicit remote opt-in in `LocalLens/AppShell/SettingsWindow.swift`
-- [ ] T102 [US7] Add Diagnostics Settings section with failure dashboard, retry/ignore/reauthorize/rebuild actions, and redacted export button in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T097 [P] [US7] Implement diagnostic exporter with safe counts, provider health summaries, hashed paths, omitted transcripts, omitted extracted text, omitted credentials, and omitted raw provider bodies in `LocalLens/Diagnostics/DiagnosticExporter.swift`
+- [X] T098 [P] [US7] Implement privacy audit service for remote transmission checks, source mutation checks, provider default checks, and diagnostic redaction checks in `LocalLens/Diagnostics/PrivacyAudit.swift`
+- [X] T099 [US7] Implement storage usage, delete index, rebuild index, and cache cleanup actions in `LocalLens/Storage/Repositories/StorageMaintenanceRepository.swift`
+- [X] T100 [US7] Add Privacy & Storage Settings section with local index path, size, delete, rebuild, and privacy explanation in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T101 [US7] Add AI Providers Settings section with oMLX, Ollama, Hermes Agent, custom remote, health checks, transport warnings, Keychain credential state, and explicit remote opt-in in `LocalLens/AppShell/SettingsWindow.swift`
+- [X] T102 [US7] Add Diagnostics Settings section with failure dashboard, retry/ignore/reauthorize/rebuild actions, and redacted export button in `LocalLens/AppShell/SettingsWindow.swift`
 
 **Checkpoint**: User Story 7 completes trust, storage, provider, and diagnostic controls.
 
@@ -252,17 +252,17 @@
 
 **Purpose**: Hardening, performance, accessibility, Liquid Glass polish, docs, and final verification across all user stories.
 
-- [ ] T103 [P] Add accessibility identifiers, VoiceOver labels, reduced transparency fallbacks, reduced motion handling, and keyboard focus rings across app views in `LocalLens/DesignSystem/Components/AccessibilitySupport.swift`
-- [ ] T104 [P] Implement macOS 26 Liquid Glass design tokens, fallback materials, contrast-safe surfaces, and reusable glass action components in `LocalLens/DesignSystem/LiquidGlass/LiquidGlassComponents.swift`
-- [ ] T105 [P] Add native macOS visual theme tokens for light mode, dark mode, system accent color, typography, spacing, thumbnails, and status colors in `LocalLens/DesignSystem/Theme/LocalLensTheme.swift`
-- [ ] T106 [P] Create 10,000-asset synthetic search performance fixture and benchmark harness in `LocalLensTests/SearchTests/SearchPerformanceTests.swift`
-- [ ] T107 [P] Create 1,000-file mixed-media indexing responsiveness test harness with pause/resume/cancel assertions in `LocalLensTests/IndexingTests/IndexingResponsivenessTests.swift`
-- [ ] T108 [P] Create non-destructive source byte comparison helper and apply it to fixture media flows in `LocalLensTests/PrivacySecurityTests/SourceMutationGuardTests.swift`
-- [ ] T109 [P] Add app icon, menu bar template image, accent colors, and placeholder thumbnails in `LocalLens/Resources/Assets.xcassets`
-- [ ] T110 Update quickstart with final XCodeMCP build, test, provider-health, and manual smoke-test steps in `specs/001-local-media-library/quickstart.md`
-- [ ] T111 Run full unit test target and record passing command/output summary in `specs/001-local-media-library/quickstart.md`
-- [ ] T112 Run UI smoke test target and record passing command/output summary in `specs/001-local-media-library/quickstart.md`
-- [ ] T113 Build LocalLens app target with XCodeMCP or xcodebuild and record passing command/output summary in `specs/001-local-media-library/quickstart.md`
+- [X] T103 [P] Add accessibility identifiers, VoiceOver labels, reduced transparency fallbacks, reduced motion handling, and keyboard focus rings across app views in `LocalLens/DesignSystem/Components/AccessibilitySupport.swift`
+- [X] T104 [P] Implement macOS 26 Liquid Glass design tokens, fallback materials, contrast-safe surfaces, and reusable glass action components in `LocalLens/DesignSystem/LiquidGlass/LiquidGlassComponents.swift`
+- [X] T105 [P] Add native macOS visual theme tokens for light mode, dark mode, system accent color, typography, spacing, thumbnails, and status colors in `LocalLens/DesignSystem/Theme/LocalLensTheme.swift`
+- [X] T106 [P] Create 10,000-asset synthetic search performance fixture and benchmark harness in `LocalLensTests/SearchTests/SearchPerformanceTests.swift`
+- [X] T107 [P] Create 1,000-file mixed-media indexing responsiveness test harness with pause/resume/cancel assertions in `LocalLensTests/IndexingTests/IndexingResponsivenessTests.swift`
+- [X] T108 [P] Create non-destructive source byte comparison helper and apply it to fixture media flows in `LocalLensTests/PrivacySecurityTests/SourceMutationGuardTests.swift`
+- [X] T109 [P] Add app icon, menu bar template image, accent colors, and placeholder thumbnails in `LocalLens/Resources/Assets.xcassets`
+- [X] T110 Update quickstart with final XCodeMCP build, test, provider-health, and manual smoke-test steps in `specs/001-local-media-library/quickstart.md`
+- [X] T111 Run full unit test target and record passing command/output summary in `specs/001-local-media-library/quickstart.md`
+- [X] T112 Run UI smoke test target and record passing command/output summary in `specs/001-local-media-library/quickstart.md`
+- [X] T113 Build LocalLens app target with XCodeMCP or xcodebuild and record passing command/output summary in `specs/001-local-media-library/quickstart.md`
 - [X] T114 Update `AGENTS.md` with implementation notes for XCodeMCP build usage, local provider defaults, redaction rules, and non-destructive source-file constraints
 
 **Checkpoint**: MVP implementation is built, tested, documented, and ready for review.
@@ -427,3 +427,4 @@ Task: "T098 Implement LocalLens/Diagnostics/PrivacyAudit.swift"
 - **US7 Understand Privacy, Storage, and Failures**: 10 tasks
 - **Polish & Cross-Cutting**: 12 tasks
 - **Parallelizable tasks**: 64
+

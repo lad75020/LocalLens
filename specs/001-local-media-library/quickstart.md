@@ -130,3 +130,50 @@ xcodebuild -project LocalLens.xcodeproj -scheme LocalLens -destination 'platform
 ```
 
 Result: `** TEST SUCCEEDED **` with 13 unit tests and 3 UI smoke tests passing. The run emitted unrelated `linkd.autoShortcut`, detached-signature, and LLDB debugger-version warnings, but XCTest completed successfully.
+
+
+### 2026-06-16 Indexing Controls, Privacy, Diagnostics, and Polish Pass
+
+Regenerated project command:
+
+```bash
+xcodegen generate
+```
+
+Result: created `LocalLens.xcodeproj` at `/Volumes/WDBlack4TB/Code/LocalLens/LocalLens.xcodeproj`.
+
+Provider-health smoke commands:
+
+```bash
+curl -s http://localhost:17998/v1/models || true
+curl -s http://localhost:11434/v1/models || true
+curl -s http://localhost:8642/v1/models || true
+```
+
+Expected result: provider unavailability is tolerated; local Apple-framework indexing/search and app launch do not depend on these endpoints.
+
+Full unit/UI test command through XCodeMCP:
+
+```text
+XCodeMCP RunAllTests(tabIdentifier: windowtab4)
+```
+
+Result: `66 tests: 65 passed, 0 failed, 0 skipped, 0 expected failures, 1 not run`. The single not-run entry is the abstract `LocalLensUITestBase`; all discovered unit tests and UI smoke tests passed. Console log: `/var/folders/gq/fj68kcfn2t1fb21qqrt6b44h0000gn/T/ActionArtifacts/default/RunAllTests/test-console-log-2026-06-16T00-13-55+02-00.txt`.
+
+UI smoke coverage recorded from the same XCodeMCP run:
+
+```text
+OnboardingUITests/testFirstFolderOnboardingAddSettingsListAndRemoval() — Passed
+SearchPopoverUITests/testMenuBarSearchKeyboardNavigationEmptyStateAndMatchReasons() — Passed
+SettingsUITests/testSettingsSmoke() — Passed
+SettingsUITests/testIndexingAndPrivacyControlsAreReachableSmoke() — Passed
+SettingsUITests/testDiagnosticsAndProviderSettingsSmoke() — Passed
+```
+
+Final app build command through XCodeMCP:
+
+```text
+XCodeMCP BuildProject(tabIdentifier: windowtab4)
+```
+
+Result: project built successfully in 0.355s with 0 errors. Build log: `/var/folders/gq/fj68kcfn2t1fb21qqrt6b44h0000gn/T/ActionArtifacts/default/BuildProject/BuildProject-Log-20260616-001513.txt`.

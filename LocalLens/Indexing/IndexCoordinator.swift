@@ -194,6 +194,90 @@ public actor IndexCoordinator {
         }
     }
 
+    public func pauseIndexing(queue: IndexQueueActor, progressStore: IndexProgressStore? = nil) async {
+        await queue.pause()
+        if let progressStore { await progressStore.publish(await queue.snapshot()) }
+    }
+
+    public func resumeIndexing(queue: IndexQueueActor, cancellation: IndexCancellation? = nil, progressStore: IndexProgressStore? = nil) async {
+        cancellation?.reset()
+        await queue.resume()
+        if let progressStore { await progressStore.publish(await queue.snapshot()) }
+    }
+
+    public func cancelIndexing(queue: IndexQueueActor, cancellation: IndexCancellation, progressStore: IndexProgressStore? = nil) async {
+        cancellation.cancel()
+        await queue.cancelRunning()
+        if let progressStore { await progressStore.publish(await queue.snapshot()) }
+    }
+
+    public func retryFailure(_ failure: IndexFailure, storage: StorageRepositories, queue: IndexQueueActor) async throws {
+        let job = recoveryJob(for: failure, fallbackType: .indexAsset)
+        try await storage.jobs.enqueue(job)
+        await queue.enqueue(job)
+        try await storage.failures.resolve(id: failure.id, at: Date())
+        if let assetID = failure.assetID {
+            try await storage.assets.updateIndexState(id: assetID, state: .queued, lastIndexedAt: nil)
+        }
+    }
+
+    public func ignoreFailure(_ failure: IndexFailure, storage: StorageRepositories) async throws {
+        try await storage.failures.resolve(id: failure.id, at: Date())
+        if let assetID = failure.assetID {
+            try await storage.assets.updateIndexState(id: assetID, state: .failed, lastIndexedAt: nil)
+        }
+    }
+
+    public func reindexAsset(_ assetID: UUID, storage: StorageRepositories, queue: IndexQueueActor, priority: Int = 50) async throws {
+        let job = IndexJob(jobType: .reindexAsset, assetID: assetID, priority: priority, status: .queued)
+        try await storage.jobs.enqueue(job)
+        await queue.enqueue(job)
+        try await storage.assets.updateIndexState(id: assetID, state: .queued, lastIndexedAt: nil)
+    }
+
+    public func reindexFolder(_ folderID: UUID, storage: StorageRepositories, queue: IndexQueueActor, priority: Int = 75) async throws {
+        let job = IndexJob(jobType: .reindexFolder, watchedFolderID: folderID, priority: priority, status: .queued)
+        try await storage.jobs.enqueue(job)
+        await queue.enqueue(job)
+        let assets = try await storage.assets.list(watchedFolderID: folderID)
+        for asset in assets {
+            try await storage.assets.updateIndexState(id: asset.id, state: .queued, lastIndexedAt: nil)
+        }
+    }
+
+    public func rebuildQueue(storage: StorageRepositories, queue: IndexQueueActor) async throws {
+        let folders = try await storage.watchedFolders.list().filter { $0.isEnabled }
+        for folder in folders {
+            try await reindexFolder(folder.id, storage: storage, queue: queue, priority: 100)
+        }
+    }
+
+    public func cleanupMissing(storage: StorageRepositories) async throws -> Int {
+        let assets = try await storage.assets.list(watchedFolderID: nil).filter { $0.indexState == .missing }
+        for asset in assets {
+            try await storage.chunks.removeByAsset(id: asset.id)
+            try await storage.extractionRecords.removeByAsset(id: asset.id)
+            try await storage.assets.remove(id: asset.id)
+        }
+        return assets.count
+    }
+
+    private func recoveryJob(for failure: IndexFailure, fallbackType: JobType) -> IndexJob {
+        let type: JobType
+        switch failure.retryability {
+        case .rebuildIndex: type = .reindexFolder
+        default: type = fallbackType
+        }
+        return IndexJob(
+            jobType: failure.watchedFolderID != nil && failure.assetID == nil ? .reindexFolder : type,
+            watchedFolderID: failure.watchedFolderID,
+            assetID: failure.assetID,
+            priority: 90,
+            status: .queued,
+            lastErrorCategory: nil
+        )
+    }
+
     private static func durationSummary(_ seconds: Double) -> String {
         let total = max(0, Int(seconds.rounded()))
         return String(format: "%d:%02d", total / 60, total % 60)

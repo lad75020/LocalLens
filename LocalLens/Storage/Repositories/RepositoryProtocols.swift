@@ -61,7 +61,10 @@ public protocol AppSettingsRepository: Sendable {
 
 public protocol StorageMaintenanceRepositoryProtocol: Sendable {
     func indexedAssetCount() async throws -> Int
+    func storageUsage() async throws -> StorageUsageSnapshot
     func deleteIndexData() async throws
+    func rebuildIndexData() async throws
+    func cleanupCacheData() async throws
 }
 
 public struct StorageRepositories: Sendable {
