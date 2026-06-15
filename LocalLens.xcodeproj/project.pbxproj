@@ -17,7 +17,9 @@
 		1F6B96433FB313572D7818CA /* AccessibilitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12816A0129DAECFC3E9FFCAD /* AccessibilitySupport.swift */; };
 		229E71BEB145D56EF6AC1F81 /* CachePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461868D46A42741E4DA757C6 /* CachePaths.swift */; };
 		23A12DBC7224344E556CAC28 /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ABBA4784C535F1F4DF83239F /* UniformTypeIdentifiers.framework */; };
+		23EB69E1F4BD681DD69A004D /* SettingsWindowPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E716EC0FD7874B54CDBA8999 /* SettingsWindowPresenterTests.swift */; };
 		2EE6B82BE27E230FB7958E11 /* SearchPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428FDCEA67EB184602844351 /* SearchPopoverView.swift */; };
+		35D264D67F4AD2E2F7980A2F /* SettingsWindowPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88330548B0CB9766BF8511CF /* SettingsWindowPresenter.swift */; };
 		3AB957107273DF7402B11393 /* LocalLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB655F23049845077646D3C /* LocalLensApp.swift */; };
 		3CC53A9A9767B126F1A0D3CE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79FB0DBDC35B5C28153B2CD /* OnboardingView.swift */; };
 		40D62078BEE2025D85AA859C /* IndexProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9743C9374CF5923E99A943DA /* IndexProgressStore.swift */; };
@@ -144,6 +146,7 @@
 		855D6C00F66CF3340D1D8B03 /* SemanticVectorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticVectorStore.swift; sourceTree = "<group>"; };
 		8575D0B294D12C3831CEAAD4 /* LiquidGlassComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassComponents.swift; sourceTree = "<group>"; };
 		85CD3ABF7EF8954067AAD66D /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		88330548B0CB9766BF8511CF /* SettingsWindowPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowPresenter.swift; sourceTree = "<group>"; };
 		9307920AED48B0E4D7BA4200 /* SearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchService.swift; sourceTree = "<group>"; };
 		941FD96AA52587114ECE0CE3 /* SearchResultViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultViewModel.swift; sourceTree = "<group>"; };
 		948CDC9EFC1F9DE883901083 /* LocalLensTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalLensTheme.swift; sourceTree = "<group>"; };
@@ -168,6 +171,7 @@
 		DB6B9E301A79E01639981761 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		DE5A1731B0DA2F2E8C165F92 /* ImageExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageExtractor.swift; sourceTree = "<group>"; };
 		E3619B7648AE386408FDAFF2 /* QuickLookPreviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookPreviewService.swift; sourceTree = "<group>"; };
+		E716EC0FD7874B54CDBA8999 /* SettingsWindowPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowPresenterTests.swift; sourceTree = "<group>"; };
 		EA051E10B900421CFAE83A77 /* IndexCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexCoordinator.swift; sourceTree = "<group>"; };
 		ED1CC61D29B908C9764CD0FE /* FolderAuthorizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderAuthorizationService.swift; sourceTree = "<group>"; };
 		ED7D7BD241CDED9651304C0F /* MediaDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDiscoveryService.swift; sourceTree = "<group>"; };
@@ -252,6 +256,7 @@
 		12064F2286594EF9670593B0 /* LocalLensTests */ = {
 			isa = PBXGroup;
 			children = (
+				C6DC007DDF8444636B2F157C /* AppShellTests */,
 				D1162224D07720EECD0AEC21 /* DiagnosticsTests */,
 				27B17E48715B6F73DF74BCE9 /* Fixtures */,
 				006FA1ED7891FEF3EE9BEC6F /* IndexingTests */,
@@ -376,6 +381,7 @@
 				D79FB0DBDC35B5C28153B2CD /* OnboardingView.swift */,
 				428FDCEA67EB184602844351 /* SearchPopoverView.swift */,
 				6D0ADA974183F0A69B3F67E2 /* SettingsWindow.swift */,
+				88330548B0CB9766BF8511CF /* SettingsWindowPresenter.swift */,
 			);
 			path = AppShell;
 			sourceTree = "<group>";
@@ -470,6 +476,14 @@
 				0A1700F2906EC6907D2AA64B /* Repositories */,
 			);
 			path = Storage;
+			sourceTree = "<group>";
+		};
+		C6DC007DDF8444636B2F157C /* AppShellTests */ = {
+			isa = PBXGroup;
+			children = (
+				E716EC0FD7874B54CDBA8999 /* SettingsWindowPresenterTests.swift */,
+			);
+			path = AppShellTests;
 			sourceTree = "<group>";
 		};
 		D09C9AD68D402C4A7FA4B71B /* LocalLensUITests */ = {
@@ -712,6 +726,7 @@
 				B45E1B5CB7D2295CC8F15965 /* SecurityScopedBookmarkStore.swift in Sources */,
 				DA954838B4D138F2D4FDC783 /* SemanticVectorStore.swift in Sources */,
 				11694B4A509C4505739069C1 /* SettingsWindow.swift in Sources */,
+				35D264D67F4AD2E2F7980A2F /* SettingsWindowPresenter.swift in Sources */,
 				B29383EA8C0D554A50E18763 /* SnippetBuilder.swift in Sources */,
 				FFB5E53A548EC4C0DCECD199 /* ThumbnailService.swift in Sources */,
 				14AB16F351558C147A18B360 /* VideoSceneExtractor.swift in Sources */,
@@ -728,6 +743,7 @@
 				76CE8C059C2A9295B847BF46 /* PromptTemplatesTests.swift in Sources */,
 				A2D9037F3A1D185577ACA525 /* ProviderTransportPolicyTests.swift in Sources */,
 				77B3C78A234188A908D09171 /* RedactionPolicyTests.swift in Sources */,
+				23EB69E1F4BD681DD69A004D /* SettingsWindowPresenterTests.swift in Sources */,
 				CD19BD040E471BD8A66C58DC /* TestDependencyFactory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

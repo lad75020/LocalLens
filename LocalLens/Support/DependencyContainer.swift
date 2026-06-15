@@ -37,6 +37,7 @@ public final class DependencyContainer: ObservableObject {
     public let clipboardActionService: ClipboardActionService
     public let diagnosticExporter: DiagnosticExporter
     public let privacyAudit: PrivacyAudit
+    public let settingsWindowPresenter: SettingsWindowPresenter
 
     public init() throws {
         let database = try LocalLensDatabase()
@@ -96,6 +97,7 @@ public final class DependencyContainer: ObservableObject {
         self.clipboardActionService = ClipboardActionService()
         self.diagnosticExporter = DiagnosticExporter()
         self.privacyAudit = PrivacyAudit()
+        self.settingsWindowPresenter = SettingsWindowPresenter()
 
         Task { [database, providerRegistry, providers] in
             try await database.migrate()
