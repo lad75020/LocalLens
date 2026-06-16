@@ -81,13 +81,13 @@ public actor IndexCoordinator {
             var chunks = chunkBuilder.chunks(for: asset, imageResult: imageResult, pdfResult: pdfResult, extractionRecordIDs: recordIDs)
             let embeddingResult = await embeddingStageService.embed(chunks: chunks, providers: providers)
             chunks = embeddingResult.chunks
-            if let failure = embeddingResult.failureCategory, embeddingResult.state == .partial {
-                partialFailures.append(failure)
-            }
             for chunk in chunks {
                 try await storage.chunks.save(chunk)
             }
             try await storage.extractionRecords.save(record(assetID: asset.id, stage: .embeddings, providerID: embeddingResult.providerID, status: embeddingResult.state, summary: embeddingResult.providerID == nil ? "No automatic local embedding provider configured" : "Embedding stage completed", error: embeddingResult.failureCategory))
+            if embeddingResult.state == .cancelled {
+                throw CancellationError()
+            }
 
             let finalState: IndexState = partialFailures.isEmpty ? .complete : .partial
             asset.indexState = finalState

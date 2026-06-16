@@ -39,7 +39,7 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
         XCTAssertEqual(embeddingRecord?.status, .complete)
     }
 
-    func testEmbeddingProviderAndPartialAssetCommitsForPDF() async throws {
+    func testEmbeddingProviderFailureDoesNotDowngradeSearchablePDFCommit() async throws {
         let root = try MediaFixtureFactory.tempRoot()
         let pdfURL = try MediaFixtureFactory.writePDF(pages: ["LocalLens PDF pipeline"], in: root)
         let db = try TestDependencyFactory.temporaryDatabase()
@@ -74,13 +74,58 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
             providers: [provider]
         )
 
-        XCTAssertTrue([IndexState.complete, .partial].contains(result.state))
+        XCTAssertEqual(result.state, .complete)
         let storedAsset = try await storage.assets.get(id: asset.id)
-        XCTAssertEqual(storedAsset?.indexState, result.state)
+        XCTAssertEqual(storedAsset?.indexState, .complete)
         XCTAssertEqual(storedAsset?.pageCount, 1)
         let records = try await storage.extractionRecords.list(assetID: asset.id)
-        XCTAssertTrue(records.contains { $0.stage == .pdfText })
-        XCTAssertTrue(records.contains { $0.stage == .embeddings })
+        XCTAssertTrue(records.contains { $0.stage == .pdfText && $0.status == .complete })
+        let embeddingRecord = records.first { $0.stage == .embeddings }
+        XCTAssertEqual(embeddingRecord?.status, .partial)
+        XCTAssertEqual(embeddingRecord?.errorCategory, .modelUnavailable)
+    }
+
+    func testEmbeddingStagePrefersEmbeddingCapableModelOverSelectedChatModel() async throws {
+        let assetID = UUID()
+        let chunk = SearchableChunk(
+            id: UUID(),
+            assetID: assetID,
+            extractionRecordID: nil,
+            chunkType: .visibleText,
+            text: "LocalLens searchable text",
+            normalizedText: "locallens searchable text",
+            embedding: nil,
+            embeddingModel: nil,
+            pageNumber: nil,
+            timestampStart: nil,
+            timestampEnd: nil,
+            confidence: nil,
+            createdAt: Date()
+        )
+        let provider = ProviderSetting(
+            id: "ollama",
+            displayName: "Ollama",
+            baseURL: URL(string: "http://localhost:11434/v1")!,
+            isEnabled: true,
+            automaticIndexingEnabled: true,
+            locality: .localLoopback,
+            transportState: .allowedLoopbackHTTP,
+            credentialState: .noneNeeded,
+            modelIDs: ["gemma4:e4b", "nomic-embed-text:latest"],
+            selectedModelID: "gemma4:e4b",
+            lastHealthCheckAt: nil,
+            lastHealthStatus: .healthy
+        )
+        let client = CapturingEmbeddingClient()
+
+        let result = await EmbeddingStageService().embed(chunks: [chunk], providers: [provider]) { _ in client }
+
+        let requestedModels = await client.requestedModels
+        XCTAssertEqual(requestedModels, ["nomic-embed-text:latest"])
+        XCTAssertEqual(result.providerID, "ollama")
+        XCTAssertEqual(result.state, .complete)
+        XCTAssertEqual(result.chunks.first?.embeddingModel, "nomic-embed-text:latest")
+        XCTAssertNotNil(result.chunks.first?.embedding)
     }
 
     func testCancelledCommitDoesNotMarkAssetComplete() async throws {
@@ -126,5 +171,14 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
             officeExtractionMetadata: SQLiteOfficeExtractionMetadataRepository(database: database),
             maintenance: StorageMaintenanceRepository(database: database)
         )
+    }
+}
+
+private actor CapturingEmbeddingClient: EmbeddingClient {
+    private(set) var requestedModels: [String] = []
+
+    func embeddings(model: String, inputs: [String]) async throws -> [[Float]] {
+        requestedModels.append(model)
+        return inputs.map { _ in [0.1, 0.2, 0.3] }
     }
 }

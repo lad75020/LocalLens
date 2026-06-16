@@ -14,21 +14,11 @@ public struct EmbeddingStageService: Sendable {
             return EmbeddingStageResult(chunks: [], providerID: nil, state: .complete, failureCategory: nil)
         }
 
-        guard let provider = providers.first(where: { setting in
-            setting.isEnabled
-                && setting.automaticIndexingEnabled
-                && setting.locality == .localLoopback
-                && setting.transportState == .allowedLoopbackHTTP
-                && setting.effectiveModelID != nil
-                && (setting.selectedModelID == nil || setting.hasUsableSelectedModel)
-        }) else {
+        guard let (provider, model) = Self.embeddingProviderAndModel(from: providers) else {
             return EmbeddingStageResult(chunks: chunks, providerID: nil, state: .complete, failureCategory: nil)
         }
 
         do {
-            guard let model = provider.effectiveModelID else {
-                return EmbeddingStageResult(chunks: chunks, providerID: provider.id, state: .partial, failureCategory: .modelUnavailable)
-            }
             let inputs = chunks.map { String($0.text.prefix(BuildConfiguration.maxPromptCharacters)) }
             let embeddings = try await clientFactory(provider).embeddings(model: model, inputs: inputs)
             guard embeddings.count == chunks.count else {
@@ -57,5 +47,50 @@ public struct EmbeddingStageService: Sendable {
         } catch {
             return EmbeddingStageResult(chunks: chunks, providerID: provider.id, state: .partial, failureCategory: .modelUnavailable)
         }
+    }
+
+    private static func embeddingProviderAndModel(from providers: [ProviderSetting]) -> (ProviderSetting, String)? {
+        for provider in providers where isEligibleEmbeddingProvider(provider) {
+            if let model = embeddingModelID(for: provider) {
+                return (provider, model)
+            }
+        }
+        return nil
+    }
+
+    private static func isEligibleEmbeddingProvider(_ provider: ProviderSetting) -> Bool {
+        provider.isEnabled
+            && provider.automaticIndexingEnabled
+            && provider.locality == .localLoopback
+            && provider.transportState == .allowedLoopbackHTTP
+            && (provider.selectedModelID == nil || provider.hasUsableSelectedModel)
+    }
+
+    private static func embeddingModelID(for provider: ProviderSetting) -> String? {
+        if let selected = provider.selectedModelID, isLikelyEmbeddingModel(selected) {
+            return selected
+        }
+        if let embeddingModel = provider.modelIDs.first(where: isLikelyEmbeddingModel) {
+            return embeddingModel
+        }
+        return provider.selectedModelID == nil ? provider.modelIDs.first : nil
+    }
+
+    private static func isLikelyEmbeddingModel(_ modelID: String) -> Bool {
+        let normalized = modelID.lowercased()
+        let embeddingHints = [
+            "embed",
+            "embedding",
+            "nomic",
+            "bge",
+            "e5",
+            "jina",
+            "gte",
+            "minilm",
+            "sentence-transformers",
+            "snowflake-arctic",
+            "mxbai"
+        ]
+        return embeddingHints.contains { normalized.contains($0) }
     }
 }
