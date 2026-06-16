@@ -50,47 +50,13 @@ public struct EmbeddingStageService: Sendable {
     }
 
     private static func embeddingProviderAndModel(from providers: [ProviderSetting]) -> (ProviderSetting, String)? {
-        for provider in providers where isEligibleEmbeddingProvider(provider) {
-            if let model = embeddingModelID(for: provider) {
-                return (provider, model)
-            }
-        }
-        return nil
+        guard let provider = providers.first(where: isEligibleEmbeddingProvider) else { return nil }
+        return (provider, BuildConfiguration.fixedEmbeddingModelID)
     }
 
-    private static func isEligibleEmbeddingProvider(_ provider: ProviderSetting) -> Bool {
-        provider.isEnabled
-            && provider.automaticIndexingEnabled
-            && provider.locality == .localLoopback
+    public static func isEligibleEmbeddingProvider(_ provider: ProviderSetting) -> Bool {
+        provider.id == BuildConfiguration.fixedEmbeddingProviderID
             && provider.transportState == .allowedLoopbackHTTP
-            && (provider.selectedModelID == nil || provider.hasUsableSelectedModel)
-    }
-
-    private static func embeddingModelID(for provider: ProviderSetting) -> String? {
-        if let selected = provider.selectedModelID, isLikelyEmbeddingModel(selected) {
-            return selected
-        }
-        if let embeddingModel = provider.modelIDs.first(where: isLikelyEmbeddingModel) {
-            return embeddingModel
-        }
-        return provider.selectedModelID == nil ? provider.modelIDs.first : nil
-    }
-
-    private static func isLikelyEmbeddingModel(_ modelID: String) -> Bool {
-        let normalized = modelID.lowercased()
-        let embeddingHints = [
-            "embed",
-            "embedding",
-            "nomic",
-            "bge",
-            "e5",
-            "jina",
-            "gte",
-            "minilm",
-            "sentence-transformers",
-            "snowflake-arctic",
-            "mxbai"
-        ]
-        return embeddingHints.contains { normalized.contains($0) }
+            && provider.modelIDs.contains(BuildConfiguration.fixedEmbeddingModelID)
     }
 }

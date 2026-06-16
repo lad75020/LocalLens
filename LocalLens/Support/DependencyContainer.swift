@@ -67,6 +67,7 @@ public final class DependencyContainer: ObservableObject {
         let providerModelSelections = SQLiteProviderModelSelectionRepository(database: database)
         let hermesProfileSelection = SQLiteHermesProfileSelectionRepository(database: database)
         let officeExtractionMetadata = SQLiteOfficeExtractionMetadataRepository(database: database)
+        let generatedContent = SQLiteGeneratedContentRepository(database: database)
         let maintenance = StorageMaintenanceRepository(database: database)
         self.storage = StorageRepositories(
             watchedFolders: watchedFolders,
@@ -81,6 +82,7 @@ public final class DependencyContainer: ObservableObject {
             providerModelSelections: providerModelSelections,
             hermesProfileSelection: hermesProfileSelection,
             officeExtractionMetadata: officeExtractionMetadata,
+            generatedContent: generatedContent,
             maintenance: maintenance
         )
 

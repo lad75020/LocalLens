@@ -68,7 +68,7 @@ public struct SemanticVectorStore: Sendable {
         let normalizedQuery = request.normalizedQuery
         guard !normalizedQuery.isEmpty else { return nil }
         guard let provider = providers.first(where: Self.isEligibleLocalEmbeddingProvider) else { return nil }
-        guard let modelID = provider.modelIDs.first else { return nil }
+        let modelID = BuildConfiguration.fixedEmbeddingModelID
 
         do {
             let embeddings = try await clientFactory(provider).embeddings(model: modelID, inputs: [request.boundedProviderQuery])
@@ -82,10 +82,8 @@ public struct SemanticVectorStore: Sendable {
     }
 
     public static func isEligibleLocalEmbeddingProvider(_ provider: ProviderSetting) -> Bool {
-        provider.isEnabled
-            && provider.automaticIndexingEnabled
-            && provider.locality == .localLoopback
+        provider.id == BuildConfiguration.fixedEmbeddingProviderID
             && provider.transportState == .allowedLoopbackHTTP
-            && !provider.modelIDs.isEmpty
+            && provider.modelIDs.contains(BuildConfiguration.fixedEmbeddingModelID)
     }
 }

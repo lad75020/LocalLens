@@ -9,7 +9,7 @@ public struct ProviderRegistry: Sendable {
             setting(id: "omlx", name: "oMLX", url: BuildConfiguration.omlxBaseURL, enabled: true, automatic: true),
             setting(id: "ollama", name: "Ollama", url: BuildConfiguration.ollamaBaseURL, enabled: true, automatic: true),
             setting(id: "hermes-agent", name: "Hermes Agent", url: BuildConfiguration.hermesAgentBaseURL, enabled: true, automatic: false),
-            setting(id: "custom", name: "Custom Remote", url: URL(string: "https://example.invalid/v1")!, enabled: false, automatic: false, locality: .remote)
+            setting(id: "custom", name: "Custom Remote", url: URL(string: "https://example.invalid/v1")!, enabled: true, automatic: false, locality: .remote)
         ]
     }
 
@@ -20,7 +20,13 @@ public struct ProviderRegistry: Sendable {
 
     public func mergedDefaultProviders(with persistedProviders: [ProviderSetting]) -> [ProviderSetting] {
         guard !persistedProviders.isEmpty else { return defaultProviders() }
-        return persistedProviders + missingDefaultProviders(from: persistedProviders)
+        return persistedProviders.map(normalizedVisibleProvider) + missingDefaultProviders(from: persistedProviders)
+    }
+
+    public func normalizedVisibleProvider(_ provider: ProviderSetting) -> ProviderSetting {
+        var provider = provider
+        provider.isEnabled = true
+        return provider
     }
 
     private func setting(id: String, name: String, url: URL, enabled: Bool, automatic: Bool, locality override: ProviderLocality? = nil) -> ProviderSetting {

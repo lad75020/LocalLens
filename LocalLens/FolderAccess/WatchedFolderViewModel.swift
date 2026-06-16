@@ -86,7 +86,7 @@ public final class WatchedFolderViewModel: ObservableObject {
         let hermesProvider = try await dependencies.storage.providers.get(id: "hermes-agent")
         let officePolicy = OfficeDiscoveryPolicy(
             preferences: preferences,
-            hermesReadyForOfficeIndexing: (hermesProvider?.isEnabled == true) && hermesProfile.isReadyForOfficeIndexing
+            hermesReadyForOfficeIndexing: hermesProvider != nil && hermesProfile.isReadyForOfficeIndexing
         )
         let result = try dependencies.mediaDiscoveryService.discover(in: rootURL, watchedFolderID: folder.id, officePolicy: officePolicy)
         for asset in result.assets {

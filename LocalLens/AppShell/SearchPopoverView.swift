@@ -273,6 +273,8 @@ private struct SearchResultRow: View {
             case .filename: "Filename"
             case .visibleText: "Visible text"
             case .pdfText: "PDF text"
+            case .imageDescription: "Image description"
+            case .pdfSummary: "PDF summary"
             case .transcript: "Transcript"
             case .visualLabel: "Visual label"
             case .officeText: "Office text"

@@ -12,5 +12,8 @@ public enum BuildConfiguration {
     public static let maxSearchResults = 100
     public static let maxPromptCharacters = 12_000
     public static let maxProviderQueryCharacters = 512
+    public static let fixedEmbeddingProviderID = "ollama"
+    public static let fixedEmbeddingModelID = "qwen3-embedding:4b"
+    public static let preferredAIProviderSettingKey = "preferredAIProviderID"
     public static let providerTimeoutSeconds: TimeInterval = 30
 }

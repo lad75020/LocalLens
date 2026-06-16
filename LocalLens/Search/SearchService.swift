@@ -135,6 +135,8 @@ public actor SearchService {
         case .filename: 4
         case .visibleText: 3
         case .pdfText: 3
+        case .imageDescription: 3.2
+        case .pdfSummary: 2.9
         case .transcript: 2.8
         case .visualLabel: 2.2
         case .officeText: 3.1

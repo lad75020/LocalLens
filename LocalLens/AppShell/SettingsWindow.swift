@@ -9,6 +9,13 @@ struct SettingsWindow: View {
         "settingsResumeIndexingButton",
         "settingsCancelIndexingButton",
         "settingsProvidersRefreshButton",
+        "settingsPreferredAIProviderPicker",
+        "settingsProviderReadiness_ollama",
+        "settingsProviderReadiness_omlx",
+        "settingsProviderReadiness_hermes-agent",
+        "settingsProviderReadiness_custom",
+        "settingsFixedEmbeddingModelReadiness_ollama",
+        "settingsRemoteProviderPrivacyWarning",
         "settingsOfficePPTXToggle",
         "settingsOfficeDOCXToggle",
         "settingsOfficeXLSXToggle",
@@ -213,6 +220,8 @@ struct SettingsWindow: View {
                 Spacer()
             }
 
+            preferredAIProviderSection
+
             officeIndexingSection
 
             VStack(spacing: 10) {
@@ -224,23 +233,24 @@ struct SettingsWindow: View {
                                 Text(provider.baseURL.absoluteString).font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Toggle("Enabled", isOn: Binding(
-                                get: { provider.isEnabled },
-                                set: { model.setProvider(provider, enabled: $0) }
-                            ))
-                            .toggleStyle(.switch)
+                            if provider.id == model.preferredAIProviderID {
+                                StatusPill(text: "Preferred for image/PDF")
+                            }
                         }
                         HStack {
                             StatusPill(text: provider.locality.rawValue)
                             StatusPill(text: provider.transportState.rawValue)
                             StatusPill(text: provider.lastHealthStatus.rawValue)
                             StatusPill(text: provider.credentialState.rawValue)
-                            Toggle("Automatic indexing", isOn: Binding(
-                                get: { provider.automaticIndexingEnabled },
-                                set: { model.setProvider(provider, automaticIndexing: $0) }
-                            ))
-                            .disabled(provider.locality != .localLoopback)
+                            StatusPill(text: model.providerReadinessLabel(for: provider))
+                                .accessibilityIdentifier("settingsProviderReadiness_\(provider.id)")
                             Spacer()
+                        }
+                        if let readinessError = model.providerReadinessError(for: provider) {
+                            Text(readinessError)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                                .accessibilityIdentifier("settingsProviderReadinessError_\(provider.id)")
                         }
                         providerSelectionControls(for: provider)
 
@@ -248,7 +258,7 @@ struct SettingsWindow: View {
                             Text("Remote AI can receive selected file content or derived text when indexing. Keep this off unless you trust the endpoint. LocalLens never enables remote AI automatically.")
                                 .font(.caption)
                                 .foregroundStyle(.orange)
-                                .accessibilityIdentifier("settingsRemoteProviderWarning")
+                                .accessibilityIdentifier("settingsRemoteProviderPrivacyWarning")
                         }
                     }
                     .padding(10)
@@ -257,6 +267,29 @@ struct SettingsWindow: View {
             }
             .accessibilityIdentifier("settingsProvidersList")
         }
+    }
+
+
+    private var preferredAIProviderSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Preferred AI provider", systemImage: "sparkles")
+                .font(.headline)
+            Text("Used for image long descriptions and PDF short summaries only. Office summaries always use Hermes Agent; embeddings always use Ollama qwen3-embedding:4b.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("Preferred AI provider", selection: Binding(
+                get: { model.preferredAIProviderID },
+                set: { model.selectPreferredAIProvider(providerID: $0) }
+            )) {
+                ForEach(model.providers) { provider in
+                    Text(provider.displayName).tag(provider.id)
+                }
+            }
+            .frame(maxWidth: 300)
+            .accessibilityIdentifier("settingsPreferredAIProviderPicker")
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
 
@@ -303,8 +336,8 @@ struct SettingsWindow: View {
             let state = model.providerModelStates[provider.id] ?? ProviderModelSelectionState(providerID: provider.id, selectedModelID: provider.selectedModelID, availableModelIDs: provider.modelIDs)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Selected model").font(.caption).foregroundStyle(.secondary)
-                    Picker("Selected model", selection: Binding(
+                    Text("Generation model").font(.caption).foregroundStyle(.secondary)
+                    Picker("Generation model", selection: Binding(
                         get: { state.selectedModelID ?? "" },
                         set: { model.selectProviderModel(provider, modelID: $0.isEmpty ? nil : $0) }
                     )) {
@@ -319,11 +352,15 @@ struct SettingsWindow: View {
                         .accessibilityIdentifier("settingsProviderModelRefresh_\(provider.id)")
                     Spacer()
                 }
-                if state.availabilityState == .stale {
-                    Text("Selected model is stale. Choose a currently reported model before new provider-backed work starts.")
+                Text(model.generationModelReadinessLabel(for: provider))
+                    .font(.caption)
+                    .foregroundStyle(model.isGenerationModelReady(for: provider) ? Color.secondary : Color.orange)
+                    .accessibilityIdentifier("settingsGenerationModelReadiness_\(provider.id)")
+                if provider.id == "ollama" {
+                    Text(model.fixedOllamaEmbeddingReadinessLabel())
                         .font(.caption)
-                        .foregroundStyle(.orange)
-                        .accessibilityIdentifier("settingsProviderModelStaleWarning_\(provider.id)")
+                        .foregroundStyle(model.isFixedOllamaEmbeddingReady ? Color.secondary : Color.orange)
+                        .accessibilityIdentifier("settingsFixedEmbeddingModelReadiness_ollama")
                 }
             }
         }
@@ -349,6 +386,10 @@ struct SettingsWindow: View {
                 Text("Office indexing uses the selected Hermes profile, including its model, provider, and skills.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text(model.hermesReadinessLabel)
+                    .font(.caption)
+                    .foregroundStyle(model.hermesProfileState.isReadyForOfficeIndexing ? Color.secondary : Color.orange)
+                    .accessibilityIdentifier("settingsHermesReadiness")
                 HStack {
                     SecureField("Hermes API key", text: $model.hermesAgentAPIKeyInput)
                         .textFieldStyle(.roundedBorder)
@@ -456,6 +497,7 @@ struct SettingsWindow: View {
 private final class SettingsWindowModel: ObservableObject {
     @Published var folders: [WatchedFolder] = []
     @Published var providers: [ProviderSetting] = []
+    @Published var preferredAIProviderID = BuildConfiguration.fixedEmbeddingProviderID
     @Published var officePreferences = OfficeIndexingPreferences()
     @Published var providerModelStates: [String: ProviderModelSelectionState] = [:]
     @Published var hermesProfileState = HermesProfileSelectionState()
@@ -488,6 +530,13 @@ private final class SettingsWindowModel: ObservableObject {
                 let hermesKey = try? dependencies.credentialStore.read(providerID: "hermes-agent")
                 self.hasHermesAgentCredential = hermesKey?.isEmpty == false
                 self.providers = try await self.loadProviders(from: dependencies, hasHermesAgentCredential: self.hasHermesAgentCredential)
+                let persistedPreferred = try await dependencies.storage.appSettings.value(forKey: BuildConfiguration.preferredAIProviderSettingKey)
+                let providerIDs = Set(self.providers.map(\.id))
+                if let persistedPreferred, providerIDs.contains(persistedPreferred) {
+                    self.preferredAIProviderID = persistedPreferred
+                } else if !providerIDs.contains(self.preferredAIProviderID) {
+                    self.preferredAIProviderID = self.providers.first?.id ?? BuildConfiguration.fixedEmbeddingProviderID
+                }
                 self.officePreferences = try await dependencies.storage.officePreferences.load()
                 self.providerModelStates = Dictionary(uniqueKeysWithValues: (try await dependencies.storage.providerModelSelections.list()).map { ($0.providerID, $0) })
                 self.hermesProfileState = try await dependencies.storage.hermesProfileSelection.load()
@@ -506,6 +555,63 @@ private final class SettingsWindowModel: ObservableObject {
                 self.statusMessage = "Unable to refresh Settings: \(error.localizedDescription)"
             }
         }
+    }
+
+    func selectPreferredAIProvider(providerID: String) {
+        guard let dependencies else { return }
+        preferredAIProviderID = providerID
+        Task { @MainActor [weak self, dependencies, providerID] in
+            do {
+                try await dependencies.storage.appSettings.set(providerID, forKey: BuildConfiguration.preferredAIProviderSettingKey)
+                self?.statusMessage = "Preferred AI provider updated."
+                self?.refresh()
+            } catch {
+                self?.statusMessage = "Unable to update preferred AI provider: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func providerReadinessLabel(for provider: ProviderSetting) -> String {
+        if provider.transportState != .allowedLoopbackHTTP { return "Transport blocked" }
+        if provider.credentialState == .missingRequired { return "Credential required" }
+        if provider.id == "hermes-agent" { return hermesProfileState.isReadyForOfficeIndexing ? "Ready" : "Select profile" }
+        if provider.id == "ollama" || provider.id == "omlx" { return isGenerationModelReady(for: provider) ? "Ready" : "Choose model" }
+        return provider.locality == .remote ? "Privacy approval required" : "Ready"
+    }
+
+    func providerReadinessError(for provider: ProviderSetting) -> String? {
+        if provider.id == "ollama", !isFixedOllamaEmbeddingReady { return "Embedding model missing: \(BuildConfiguration.fixedEmbeddingModelID)" }
+        if provider.id == preferredAIProviderID, providerReadinessLabel(for: provider) != "Ready" { return "Resolve readiness before image/PDF enrichment can use \(provider.displayName)." }
+        return nil
+    }
+
+    func generationModelReadinessLabel(for provider: ProviderSetting) -> String {
+        let state = providerModelStates[provider.id] ?? ProviderModelSelectionState(providerID: provider.id, selectedModelID: provider.selectedModelID, availableModelIDs: provider.modelIDs)
+        if state.availabilityState == .stale { return "Selected generation model stale" }
+        if (state.selectedModelID ?? "").isEmpty { return "Choose generation model" }
+        return "Generation ready"
+    }
+
+    func isGenerationModelReady(for provider: ProviderSetting) -> Bool {
+        let state = providerModelStates[provider.id] ?? ProviderModelSelectionState(providerID: provider.id, selectedModelID: provider.selectedModelID, availableModelIDs: provider.modelIDs)
+        guard let selected = state.selectedModelID, !selected.isEmpty else { return false }
+        let available = state.availableModelIDs.isEmpty ? provider.modelIDs : state.availableModelIDs
+        return available.contains(selected)
+    }
+
+    var hermesReadinessLabel: String {
+        hermesProfileState.isReadyForOfficeIndexing ? "Hermes profile ready for image/PDF and Office routes" : "Select a Hermes profile for Hermes-backed routes"
+    }
+
+    var isFixedOllamaEmbeddingReady: Bool {
+        guard let ollama = providers.first(where: { $0.id == BuildConfiguration.fixedEmbeddingProviderID }) else { return false }
+        let state = providerModelStates[ollama.id]
+        let available = state?.availableModelIDs.isEmpty == false ? (state?.availableModelIDs ?? []) : ollama.modelIDs
+        return available.contains(BuildConfiguration.fixedEmbeddingModelID)
+    }
+
+    func fixedOllamaEmbeddingReadinessLabel() -> String {
+        isFixedOllamaEmbeddingReady ? "Embedding ready: \(BuildConfiguration.fixedEmbeddingModelID)" : "Embedding model missing: \(BuildConfiguration.fixedEmbeddingModelID)"
     }
 
     func addFolder() {

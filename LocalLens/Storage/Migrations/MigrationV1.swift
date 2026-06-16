@@ -24,6 +24,8 @@ public enum MigrationV1 {
         "CREATE TABLE IF NOT EXISTS hermes_profile_selection (id TEXT PRIMARY KEY, selected_profile_id TEXT, selected_profile_display_name TEXT, available_profiles_json TEXT NOT NULL, availability_state TEXT NOT NULL, last_refreshed_at REAL, last_safe_error TEXT, updated_at REAL NOT NULL);",
         "CREATE TABLE IF NOT EXISTS office_extraction_metadata (id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, office_kind TEXT NOT NULL, provider_id TEXT NOT NULL, hermes_profile_id TEXT NOT NULL, safe_summary TEXT, safe_snippet TEXT, created_at REAL NOT NULL);",
         "CREATE INDEX IF NOT EXISTS idx_office_extraction_metadata_asset ON office_extraction_metadata(asset_id);",
+        "CREATE TABLE IF NOT EXISTS generated_content_records (id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, extraction_record_id TEXT NOT NULL, media_type TEXT NOT NULL, output_kind TEXT NOT NULL, provider_id TEXT NOT NULL, provider_mode TEXT NOT NULL, model_id TEXT, hermes_profile_id TEXT, bounded_text TEXT NOT NULL, source_prompt_version TEXT NOT NULL, status TEXT NOT NULL, error_category TEXT, created_at REAL NOT NULL, updated_at REAL NOT NULL);",
+        "CREATE INDEX IF NOT EXISTS idx_generated_content_asset ON generated_content_records(asset_id);",
         "CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at REAL NOT NULL);",
         "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, datetime('now'));"
     ]

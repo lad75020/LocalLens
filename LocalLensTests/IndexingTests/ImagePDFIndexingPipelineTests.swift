@@ -51,15 +51,15 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
         try await storage.watchedFolders.save(folder)
         let asset = MediaFixtureFactory.asset(folderID: folder.id, filename: "document.pdf", mediaType: .pdf)
         let provider = ProviderSetting(
-            id: "test-local",
-            displayName: "Test Local",
+            id: "ollama",
+            displayName: "Ollama",
             baseURL: URL(string: "http://localhost:9999/v1")!,
             isEnabled: true,
             automaticIndexingEnabled: true,
             locality: .localLoopback,
             transportState: .allowedLoopbackHTTP,
             credentialState: .noneNeeded,
-            modelIDs: ["embedding-test"],
+            modelIDs: [BuildConfiguration.fixedEmbeddingModelID],
             selectedModelID: nil,
             lastHealthCheckAt: nil,
             lastHealthStatus: .healthy
@@ -111,7 +111,7 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
             locality: .localLoopback,
             transportState: .allowedLoopbackHTTP,
             credentialState: .noneNeeded,
-            modelIDs: ["gemma4:e4b", "nomic-embed-text:latest"],
+            modelIDs: ["gemma4:e4b", BuildConfiguration.fixedEmbeddingModelID],
             selectedModelID: "gemma4:e4b",
             lastHealthCheckAt: nil,
             lastHealthStatus: .healthy
@@ -121,10 +121,10 @@ final class ImagePDFIndexingPipelineTests: XCTestCase {
         let result = await EmbeddingStageService().embed(chunks: [chunk], providers: [provider]) { _ in client }
 
         let requestedModels = await client.requestedModels
-        XCTAssertEqual(requestedModels, ["nomic-embed-text:latest"])
+        XCTAssertEqual(requestedModels, [BuildConfiguration.fixedEmbeddingModelID])
         XCTAssertEqual(result.providerID, "ollama")
         XCTAssertEqual(result.state, .complete)
-        XCTAssertEqual(result.chunks.first?.embeddingModel, "nomic-embed-text:latest")
+        XCTAssertEqual(result.chunks.first?.embeddingModel, BuildConfiguration.fixedEmbeddingModelID)
         XCTAssertNotNil(result.chunks.first?.embedding)
     }
 

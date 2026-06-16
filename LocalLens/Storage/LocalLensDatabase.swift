@@ -94,6 +94,8 @@ public actor LocalLensDatabase {
         if !(try table("provider_settings", hasColumn: "selected_model_id")) {
             try execute("ALTER TABLE provider_settings ADD COLUMN selected_model_id TEXT;")
         }
+        try execute("CREATE TABLE IF NOT EXISTS generated_content_records (id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, extraction_record_id TEXT NOT NULL, media_type TEXT NOT NULL, output_kind TEXT NOT NULL, provider_id TEXT NOT NULL, provider_mode TEXT NOT NULL, model_id TEXT, hermes_profile_id TEXT, bounded_text TEXT NOT NULL, source_prompt_version TEXT NOT NULL, status TEXT NOT NULL, error_category TEXT, created_at REAL NOT NULL, updated_at REAL NOT NULL);")
+        try execute("CREATE INDEX IF NOT EXISTS idx_generated_content_asset ON generated_content_records(asset_id);")
     }
 
     private func table(_ tableName: String, hasColumn columnName: String) throws -> Bool {

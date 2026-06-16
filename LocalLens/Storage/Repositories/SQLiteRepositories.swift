@@ -213,9 +213,9 @@ public actor SQLiteSearchableChunkRepository: SearchableChunkRepository {
         switch chunk.chunkType {
         case .filename: return [.text(chunk.id.uuidString), .text(chunk.text), empty, empty, empty, empty]
         case .visibleText: return [.text(chunk.id.uuidString), empty, .text(chunk.text), empty, empty, empty]
-        case .visualLabel, .officeText, .officeSummary, .semantic: return [.text(chunk.id.uuidString), empty, empty, .text(chunk.text), empty, empty]
+        case .visualLabel, .imageDescription, .officeText, .officeSummary, .semantic: return [.text(chunk.id.uuidString), empty, empty, .text(chunk.text), empty, empty]
         case .transcript: return [.text(chunk.id.uuidString), empty, empty, empty, .text(chunk.text), empty]
-        case .pdfText: return [.text(chunk.id.uuidString), empty, empty, empty, empty, .text(chunk.text)]
+        case .pdfText, .pdfSummary: return [.text(chunk.id.uuidString), empty, empty, empty, empty, .text(chunk.text)]
         }
     }
 
@@ -496,6 +496,53 @@ public actor SQLiteOfficeExtractionMetadataRepository: OfficeExtractionMetadataR
     }
 }
 
+
+public actor SQLiteGeneratedContentRepository: GeneratedContentRepository {
+    private let database: LocalLensDatabase
+    public init(database: LocalLensDatabase) { self.database = database }
+
+    public func save(_ record: GeneratedContentRecord) async throws {
+        try await database.execute(
+            """
+            INSERT OR REPLACE INTO generated_content_records
+            (id, asset_id, extraction_record_id, media_type, output_kind, provider_id, provider_mode, model_id, hermes_profile_id, bounded_text, source_prompt_version, status, error_category, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """,
+            bindings: [
+                .text(record.id.uuidString), .text(record.assetID.uuidString), .text(record.extractionRecordID.uuidString), .text(record.mediaType.rawValue), .text(record.outputKind.rawValue), .text(record.providerID), .text(record.providerMode.rawValue), optionalText(record.modelID), optionalText(record.hermesProfileID), .text(record.boundedText), .text(record.sourcePromptVersion), .text(record.status.rawValue), optionalText(record.errorCategory?.rawValue), date(record.createdAt), date(record.updatedAt)
+            ]
+        )
+    }
+
+    public func list(assetID: UUID) async throws -> [GeneratedContentRecord] {
+        try await database.query("SELECT * FROM generated_content_records WHERE asset_id = ? ORDER BY created_at ASC;", bindings: [.text(assetID.uuidString)]).map(Self.decode)
+    }
+
+    public func removeByAsset(id: UUID) async throws {
+        try await database.execute("DELETE FROM generated_content_records WHERE asset_id = ?;", bindings: [.text(id.uuidString)])
+    }
+
+    private static func decode(_ row: SQLiteRow) -> GeneratedContentRecord {
+        GeneratedContentRecord(
+            id: uuid(row["id"]),
+            assetID: uuid(row["asset_id"]),
+            extractionRecordID: uuid(row["extraction_record_id"]),
+            mediaType: MediaType(rawValue: row["media_type"].stringValue ?? "") ?? .image,
+            outputKind: GeneratedContentKind(rawValue: row["output_kind"].stringValue ?? "") ?? .imageLongDescription,
+            providerID: row["provider_id"].stringValue ?? "",
+            providerMode: ProviderMode(rawValue: row["provider_mode"].stringValue ?? "") ?? .localLoopback,
+            modelID: row["model_id"].stringValue,
+            hermesProfileID: row["hermes_profile_id"].stringValue,
+            boundedText: row["bounded_text"].stringValue ?? "",
+            sourcePromptVersion: row["source_prompt_version"].stringValue ?? "unknown",
+            status: IndexState(rawValue: row["status"].stringValue ?? "") ?? .complete,
+            errorCategory: row["error_category"].stringValue.flatMap(FailureCategory.init(rawValue:)),
+            createdAt: optionalDate(row["created_at"]) ?? Date(timeIntervalSince1970: 0),
+            updatedAt: optionalDate(row["updated_at"]) ?? Date(timeIntervalSince1970: 0)
+        )
+    }
+}
+
 public actor StorageMaintenanceRepository: StorageMaintenanceRepositoryProtocol {
     let database: LocalLensDatabase
     public init(database: LocalLensDatabase) { self.database = database }
@@ -503,6 +550,8 @@ public actor StorageMaintenanceRepository: StorageMaintenanceRepositoryProtocol 
     public func deleteIndexData() async throws {
         try await database.execute("DELETE FROM searchable_chunks_fts;")
         try await database.execute("DELETE FROM vector_embeddings;")
+        try await database.execute("DELETE FROM generated_content_records;")
+        try await database.execute("DELETE FROM office_extraction_metadata;")
         try await database.execute("DELETE FROM searchable_chunks;")
         try await database.execute("DELETE FROM extraction_records;")
         try await database.execute("DELETE FROM media_assets;")

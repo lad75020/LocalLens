@@ -20,7 +20,7 @@ final class HermesProfileSelectionTests: XCTestCase {
         let merged = registry.mergedDefaultProviders(with: [persistedOllama])
 
         XCTAssertEqual(merged.first?.id, "ollama")
-        XCTAssertEqual(merged.first(where: { $0.id == "ollama" })?.isEnabled, false)
+        XCTAssertEqual(merged.first(where: { $0.id == "ollama" })?.isEnabled, true)
         XCTAssertEqual(merged.first(where: { $0.id == "ollama" })?.selectedModelID, "kept-model")
         XCTAssertNotNil(merged.first(where: { $0.id == "hermes-agent" }))
         XCTAssertEqual(registry.missingDefaultProviders(from: [persistedOllama]).map(\.id), ["omlx", "hermes-agent", "custom"])

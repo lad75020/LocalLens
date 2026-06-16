@@ -27,7 +27,8 @@ final class ProviderTransportPolicyTests: XCTestCase {
         XCTAssertEqual(providers.first { $0.id == "omlx" }?.automaticIndexingEnabled, true)
         XCTAssertEqual(providers.first { $0.id == "ollama" }?.automaticIndexingEnabled, true)
         XCTAssertEqual(providers.first { $0.id == "hermes-agent" }?.automaticIndexingEnabled, false)
-        XCTAssertEqual(providers.first { $0.id == "custom" }?.isEnabled, false)
+        XCTAssertEqual(providers.first { $0.id == "custom" }?.isEnabled, true)
+        XCTAssertEqual(providers.first { $0.id == "custom" }?.automaticIndexingEnabled, false)
         XCTAssertEqual(providers.first { $0.id == "custom" }?.locality, .remote)
     }
 

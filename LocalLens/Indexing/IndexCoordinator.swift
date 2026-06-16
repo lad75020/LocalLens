@@ -164,12 +164,9 @@ public actor IndexCoordinator {
             }
 
             try cancellation.checkCancellation()
-            var chunks = chunkBuilder.chunks(for: asset, imageResult: nil, pdfResult: nil, audioResult: audioResult, videoResult: videoResult, extractionRecordIDs: recordIDs)
-            let embeddingResult = await embeddingStageService.embed(chunks: chunks, providers: providers)
-            chunks = embeddingResult.chunks
-            if let failure = embeddingResult.failureCategory, embeddingResult.state == .partial { partialFailures.append(failure) }
+            let chunks = chunkBuilder.chunks(for: asset, imageResult: nil, pdfResult: nil, audioResult: audioResult, videoResult: videoResult, extractionRecordIDs: recordIDs)
             for chunk in chunks { try await storage.chunks.save(chunk) }
-            try await storage.extractionRecords.save(record(assetID: asset.id, stage: .embeddings, providerID: embeddingResult.providerID, status: embeddingResult.state, summary: embeddingResult.providerID == nil ? "No automatic local embedding provider configured" : "Embedding stage completed", error: embeddingResult.failureCategory))
+            try await storage.extractionRecords.save(record(assetID: asset.id, stage: .audioVideoProviderSkipped, providerID: nil, status: .complete, summary: "AI provider chat and embedding requests skipped for audio/video", error: nil))
 
             let finalState: IndexState = partialFailures.isEmpty ? .complete : .partial
             asset.indexState = finalState
@@ -211,7 +208,7 @@ public actor IndexCoordinator {
             guard asset.mediaType == .office else {
                 throw ExtractionFailure.failed(category: .unsupportedMedia, retryability: .ignore, safeMessage: "Only Office assets are handled by this indexing stage.")
             }
-            guard let provider = providers.first(where: { $0.id == "hermes-agent" && $0.isEnabled }) else {
+            guard let provider = providers.first(where: { $0.id == "hermes-agent" }) else {
                 throw ExtractionFailure.failed(category: .modelUnavailable, retryability: .retry, safeMessage: "Hermes Agent is required for Office indexing.")
             }
             guard let kind = OfficeDocumentKind(rawValue: sourceURL.pathExtension.lowercased()) else {
@@ -239,6 +236,22 @@ public actor IndexCoordinator {
                 safeSummary: officeResult.safeSummary,
                 safeSnippet: officeResult.safeSnippet
             ))
+            if let generatedText = officeResult.safeSummary ?? officeResult.safeSnippet ?? Optional(officeResult.searchableText), !generatedText.isEmpty {
+                try await storage.generatedContent?.save(GeneratedContentRecord(
+                    assetID: asset.id,
+                    extractionRecordID: recordID,
+                    mediaType: .office,
+                    outputKind: .officeShortSummary,
+                    providerID: provider.id,
+                    providerMode: provider.providerModeForGeneratedContent,
+                    modelID: provider.effectiveModelID,
+                    hermesProfileID: officeResult.hermesProfileID,
+                    boundedText: generatedText,
+                    sourcePromptVersion: PromptTemplates.officeSummaryPromptVersion,
+                    status: officeResult.failureCategory == nil ? .complete : .partial,
+                    errorCategory: officeResult.failureCategory
+                ))
+            }
 
             let chunks = chunkBuilder.chunks(for: asset, imageResult: nil, pdfResult: nil, officeResult: officeResult, extractionRecordIDs: [.officeDocument: recordID])
             for chunk in chunks { try await storage.chunks.save(chunk) }

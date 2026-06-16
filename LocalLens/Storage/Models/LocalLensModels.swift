@@ -74,6 +74,105 @@ public struct SearchableChunk: Identifiable, Codable, Equatable, Sendable {
     public var createdAt: Date
 }
 
+
+public enum GeneratedContentKind: String, Codable, CaseIterable, Sendable, Hashable {
+    case imageLongDescription
+    case pdfShortSummary
+    case officeShortSummary
+
+    public var chunkType: MatchReason {
+        switch self {
+        case .imageLongDescription: return .imageDescription
+        case .pdfShortSummary: return .pdfSummary
+        case .officeShortSummary: return .officeSummary
+        }
+    }
+
+    public var extractionStage: ExtractionStage {
+        switch self {
+        case .imageLongDescription: return .imageDescription
+        case .pdfShortSummary: return .pdfSummary
+        case .officeShortSummary: return .officeSummary
+        }
+    }
+}
+
+public struct PreferredAIProviderSelection: Codable, Equatable, Sendable {
+    public var providerID: String
+    public var selectedAt: Date
+    public var lastValidatedAt: Date?
+    public var availabilityState: ProviderSelectionAvailability
+    public var lastSafeError: String?
+
+    public init(providerID: String = BuildConfiguration.fixedEmbeddingProviderID, selectedAt: Date = Date(), lastValidatedAt: Date? = nil, availabilityState: ProviderSelectionAvailability = .unknown, lastSafeError: String? = nil) {
+        self.providerID = providerID
+        self.selectedAt = selectedAt
+        self.lastValidatedAt = lastValidatedAt
+        self.availabilityState = availabilityState
+        self.lastSafeError = lastSafeError
+    }
+}
+
+public struct ProviderReadinessState: Codable, Equatable, Sendable {
+    public var providerID: String
+    public var isVisibleConfigurationTarget: Bool
+    public var transportState: TransportState
+    public var credentialState: CredentialState
+    public var generationModelState: ProviderSelectionAvailability
+    public var hermesProfileState: ProviderSelectionAvailability
+    public var preferredProviderState: ProviderSelectionAvailability
+    public var embeddingModelState: ProviderSelectionAvailability
+    public var lastSafeError: String?
+
+    public init(providerID: String, isVisibleConfigurationTarget: Bool = true, transportState: TransportState, credentialState: CredentialState, generationModelState: ProviderSelectionAvailability = .unknown, hermesProfileState: ProviderSelectionAvailability = .unknown, preferredProviderState: ProviderSelectionAvailability = .unknown, embeddingModelState: ProviderSelectionAvailability = .unknown, lastSafeError: String? = nil) {
+        self.providerID = providerID
+        self.isVisibleConfigurationTarget = isVisibleConfigurationTarget
+        self.transportState = transportState
+        self.credentialState = credentialState
+        self.generationModelState = generationModelState
+        self.hermesProfileState = hermesProfileState
+        self.preferredProviderState = preferredProviderState
+        self.embeddingModelState = embeddingModelState
+        self.lastSafeError = lastSafeError
+    }
+}
+
+public struct GeneratedContentRecord: Identifiable, Codable, Equatable, Sendable {
+    public var id: UUID
+    public var assetID: UUID
+    public var extractionRecordID: UUID
+    public var mediaType: MediaType
+    public var outputKind: GeneratedContentKind
+    public var providerID: String
+    public var providerMode: ProviderMode
+    public var modelID: String?
+    public var hermesProfileID: String?
+    public var boundedText: String
+    public var sourcePromptVersion: String
+    public var status: IndexState
+    public var errorCategory: FailureCategory?
+    public var createdAt: Date
+    public var updatedAt: Date
+
+    public init(id: UUID = UUID(), assetID: UUID, extractionRecordID: UUID, mediaType: MediaType, outputKind: GeneratedContentKind, providerID: String, providerMode: ProviderMode, modelID: String? = nil, hermesProfileID: String? = nil, boundedText: String, sourcePromptVersion: String, status: IndexState = .complete, errorCategory: FailureCategory? = nil, createdAt: Date = Date(), updatedAt: Date = Date()) {
+        self.id = id
+        self.assetID = assetID
+        self.extractionRecordID = extractionRecordID
+        self.mediaType = mediaType
+        self.outputKind = outputKind
+        self.providerID = providerID
+        self.providerMode = providerMode
+        self.modelID = modelID
+        self.hermesProfileID = hermesProfileID
+        self.boundedText = String(boundedText.prefix(BuildConfiguration.maxPromptCharacters))
+        self.sourcePromptVersion = sourcePromptVersion
+        self.status = status
+        self.errorCategory = errorCategory
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 public struct IndexJob: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var jobType: JobType

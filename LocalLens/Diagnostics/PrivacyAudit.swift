@@ -35,7 +35,7 @@ public struct PrivacyAudit: Sendable {
                 if provider.id == "hermes-agent" { return provider.automaticIndexingEnabled == false }
                 return true
             case .localNetwork, .remote:
-                return provider.isEnabled == false && provider.automaticIndexingEnabled == false
+                return provider.automaticIndexingEnabled == false && provider.transportState != .allowedLoopbackHTTP
             }
         }
     }

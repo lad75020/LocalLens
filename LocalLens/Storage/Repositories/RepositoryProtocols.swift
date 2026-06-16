@@ -80,6 +80,13 @@ public protocol OfficeExtractionMetadataRepository: Sendable {
     func list(assetID: UUID) async throws -> [OfficeExtractionMetadata]
 }
 
+
+public protocol GeneratedContentRepository: Sendable {
+    func save(_ record: GeneratedContentRecord) async throws
+    func list(assetID: UUID) async throws -> [GeneratedContentRecord]
+    func removeByAsset(id: UUID) async throws
+}
+
 public protocol StorageMaintenanceRepositoryProtocol: Sendable {
     func indexedAssetCount() async throws -> Int
     func storageUsage() async throws -> StorageUsageSnapshot
@@ -101,6 +108,7 @@ public struct StorageRepositories: Sendable {
     public let providerModelSelections: any ProviderModelSelectionRepository
     public let hermesProfileSelection: any HermesProfileSelectionRepository
     public let officeExtractionMetadata: any OfficeExtractionMetadataRepository
+    public let generatedContent: (any GeneratedContentRepository)?
     public let maintenance: any StorageMaintenanceRepositoryProtocol
 
     public init(
@@ -116,6 +124,7 @@ public struct StorageRepositories: Sendable {
         providerModelSelections: any ProviderModelSelectionRepository,
         hermesProfileSelection: any HermesProfileSelectionRepository,
         officeExtractionMetadata: any OfficeExtractionMetadataRepository,
+        generatedContent: (any GeneratedContentRepository)? = nil,
         maintenance: any StorageMaintenanceRepositoryProtocol
     ) {
         self.watchedFolders = watchedFolders
@@ -130,6 +139,7 @@ public struct StorageRepositories: Sendable {
         self.providerModelSelections = providerModelSelections
         self.hermesProfileSelection = hermesProfileSelection
         self.officeExtractionMetadata = officeExtractionMetadata
+        self.generatedContent = generatedContent
         self.maintenance = maintenance
     }
 }

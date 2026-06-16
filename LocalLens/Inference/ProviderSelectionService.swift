@@ -39,8 +39,8 @@ public struct ProviderSelectionService: Sendable {
     }
 
     public func refreshHermesProfiles(provider: ProviderSetting, previous: HermesProfileSelectionState? = nil) async -> HermesProfileSelectionState {
-        guard provider.id == "hermes-agent", provider.isEnabled else {
-            return HermesProfileSelectionState(selectedProfileID: previous?.selectedProfileID, selectedProfileDisplayName: previous?.selectedProfileDisplayName, availableProfiles: previous?.availableProfiles ?? [], availabilityState: .unavailable, lastRefreshedAt: Date(), lastSafeError: "Hermes Agent provider is disabled.")
+        guard provider.id == "hermes-agent" else {
+            return HermesProfileSelectionState(selectedProfileID: previous?.selectedProfileID, selectedProfileDisplayName: previous?.selectedProfileDisplayName, availableProfiles: previous?.availableProfiles ?? [], availabilityState: .unavailable, lastRefreshedAt: Date(), lastSafeError: "Hermes Agent provider is unavailable.")
         }
         guard provider.credentialState != .missingRequired else {
             return HermesProfileSelectionState(selectedProfileID: previous?.selectedProfileID, selectedProfileDisplayName: previous?.selectedProfileDisplayName, availableProfiles: previous?.availableProfiles ?? [], availabilityState: .unauthorized, lastRefreshedAt: Date(), lastSafeError: "Hermes Agent API key is missing.")
