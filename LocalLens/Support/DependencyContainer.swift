@@ -133,7 +133,8 @@ public final class DependencyContainer: ObservableObject {
 
         Task { [database, providerRegistry, providers] in
             try await database.migrate()
-            for setting in providerRegistry.defaultProviders() {
+            let persistedProviders = try await providers.list()
+            for setting in providerRegistry.missingDefaultProviders(from: persistedProviders) {
                 try await providers.save(setting)
             }
         }

@@ -42,6 +42,9 @@ public struct ProviderSelectionService: Sendable {
         guard provider.id == "hermes-agent", provider.isEnabled else {
             return HermesProfileSelectionState(selectedProfileID: previous?.selectedProfileID, selectedProfileDisplayName: previous?.selectedProfileDisplayName, availableProfiles: previous?.availableProfiles ?? [], availabilityState: .unavailable, lastRefreshedAt: Date(), lastSafeError: "Hermes Agent provider is disabled.")
         }
+        guard provider.credentialState != .missingRequired else {
+            return HermesProfileSelectionState(selectedProfileID: previous?.selectedProfileID, selectedProfileDisplayName: previous?.selectedProfileDisplayName, availableProfiles: previous?.availableProfiles ?? [], availabilityState: .unauthorized, lastRefreshedAt: Date(), lastSafeError: "Hermes Agent API key is missing.")
+        }
         guard provider.transportState == .allowedLoopbackHTTP else {
             return HermesProfileSelectionState(selectedProfileID: previous?.selectedProfileID, selectedProfileDisplayName: previous?.selectedProfileDisplayName, availableProfiles: previous?.availableProfiles ?? [], availabilityState: .transportBlocked, lastRefreshedAt: Date(), lastSafeError: "Transport is blocked for Hermes Agent.")
         }

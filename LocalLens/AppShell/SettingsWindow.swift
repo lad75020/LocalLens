@@ -13,6 +13,8 @@ struct SettingsWindow: View {
         "settingsOfficeDOCXToggle",
         "settingsOfficeXLSXToggle",
         "settingsHermesProfilePicker",
+        "settingsHermesAPIKeyField",
+        "settingsHermesAPIKeySaveButton",
         "settingsProviderModelPicker_ollama",
         "settingsProviderModelPicker_omlx",
         "settingsStorageRefreshButton",
@@ -347,11 +349,33 @@ struct SettingsWindow: View {
                 Text("Office indexing uses the selected Hermes profile, including its model, provider, and skills.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                HStack {
+                    SecureField("Hermes API key", text: $model.hermesAgentAPIKeyInput)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 260)
+                        .accessibilityIdentifier("settingsHermesAPIKeyField")
+                    Button("Save Key") { model.saveHermesAgentAPIKey(for: provider) }
+                        .disabled(model.hermesAgentAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("settingsHermesAPIKeySaveButton")
+                    Button("Clear Key") { model.clearHermesAgentAPIKey(for: provider) }
+                        .disabled(!model.hasHermesAgentCredential)
+                        .accessibilityIdentifier("settingsHermesAPIKeyClearButton")
+                    Text(model.hasHermesAgentCredential ? "Key stored in Keychain." : "Save API_SERVER_KEY if Hermes requires auth.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
                 if model.hermesProfileState.availabilityState == .stale || model.hermesProfileState.availabilityState == .unavailable {
                     Text("Selected Hermes profile is unavailable or stale; Office indexing is blocked until a valid profile is selected.")
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .accessibilityIdentifier("settingsHermesProfileStaleWarning")
+                }
+                if let error = model.hermesProfileState.lastSafeError, !error.isEmpty {
+                    Text("Profile refresh failed: \(error)")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier("settingsHermesProfileError")
                 }
             }
         }
@@ -435,6 +459,8 @@ private final class SettingsWindowModel: ObservableObject {
     @Published var officePreferences = OfficeIndexingPreferences()
     @Published var providerModelStates: [String: ProviderModelSelectionState] = [:]
     @Published var hermesProfileState = HermesProfileSelectionState()
+    @Published var hermesAgentAPIKeyInput = ""
+    @Published var hasHermesAgentCredential = false
     @Published var failures: [IndexFailure] = []
     @Published var progress = IndexProgressSnapshot()
     @Published var imagePDFMetrics = MediaIndexingMetrics()
@@ -459,7 +485,9 @@ private final class SettingsWindowModel: ObservableObject {
             do {
                 try await dependencies.database.migrate()
                 self.folders = try await dependencies.storage.watchedFolders.list()
-                self.providers = try await self.loadProviders(from: dependencies)
+                let hermesKey = try? dependencies.credentialStore.read(providerID: "hermes-agent")
+                self.hasHermesAgentCredential = hermesKey?.isEmpty == false
+                self.providers = try await self.loadProviders(from: dependencies, hasHermesAgentCredential: self.hasHermesAgentCredential)
                 self.officePreferences = try await dependencies.storage.officePreferences.load()
                 self.providerModelStates = Dictionary(uniqueKeysWithValues: (try await dependencies.storage.providerModelSelections.list()).map { ($0.providerID, $0) })
                 self.hermesProfileState = try await dependencies.storage.hermesProfileSelection.load()
@@ -654,6 +682,49 @@ private final class SettingsWindowModel: ObservableObject {
         }
     }
 
+    func saveHermesAgentAPIKey(for provider: ProviderSetting) {
+        guard let dependencies else { return }
+        let apiKey = hermesAgentAPIKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !apiKey.isEmpty else {
+            statusMessage = "Enter a Hermes Agent API key before saving."
+            return
+        }
+        Task { @MainActor [weak self, dependencies, provider, apiKey] in
+            guard let self else { return }
+            do {
+                try dependencies.credentialStore.save(apiKey: apiKey, providerID: "hermes-agent")
+                self.hermesAgentAPIKeyInput = ""
+                self.hasHermesAgentCredential = true
+                var updatedProvider = provider
+                updatedProvider.credentialState = .keyInKeychain
+                try await dependencies.storage.providers.save(updatedProvider)
+                self.statusMessage = "Hermes Agent API key saved in Keychain. Refresh profiles to load available profiles."
+                self.refreshHermesProfiles(updatedProvider)
+            } catch {
+                self.statusMessage = "Unable to save Hermes Agent API key: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func clearHermesAgentAPIKey(for provider: ProviderSetting) {
+        guard let dependencies else { return }
+        Task { @MainActor [weak self, dependencies, provider] in
+            guard let self else { return }
+            do {
+                try dependencies.credentialStore.delete(providerID: "hermes-agent")
+                self.hermesAgentAPIKeyInput = ""
+                self.hasHermesAgentCredential = false
+                var updatedProvider = provider
+                updatedProvider.credentialState = .missingRequired
+                try await dependencies.storage.providers.save(updatedProvider)
+                self.statusMessage = "Hermes Agent API key cleared from Keychain."
+                self.refresh()
+            } catch {
+                self.statusMessage = "Unable to clear Hermes Agent API key: \(error.localizedDescription)"
+            }
+        }
+    }
+
     func pauseIndexing() {
         guard let dependencies else { return }
         Task { @MainActor [weak self, dependencies] in
@@ -800,15 +871,19 @@ private final class SettingsWindowModel: ObservableObject {
         }
     }
 
-    private func loadProviders(from dependencies: DependencyContainer) async throws -> [ProviderSetting] {
+    private func loadProviders(from dependencies: DependencyContainer, hasHermesAgentCredential: Bool) async throws -> [ProviderSetting] {
         let persistedProviders = try await dependencies.storage.providers.list()
-        if !persistedProviders.isEmpty { return persistedProviders }
-
-        let defaults = dependencies.providerRegistry.defaultProviders()
-        for provider in defaults {
+        let providers = dependencies.providerRegistry.mergedDefaultProviders(with: persistedProviders)
+        let persistedIDs = Set(persistedProviders.map(\.id))
+        for provider in providers where !persistedIDs.contains(provider.id) {
             try await dependencies.storage.providers.save(provider)
         }
-        return defaults
+        return providers.map { provider in
+            guard provider.id == "hermes-agent" else { return provider }
+            var updated = provider
+            updated.credentialState = hasHermesAgentCredential ? .keyInKeychain : .missingRequired
+            return updated
+        }
     }
 
     private static func loadMetrics(from assetsRepository: any MediaAssetRepository, mediaTypes: Set<MediaType>) async throws -> MediaIndexingMetrics {
